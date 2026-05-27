@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Template - IntegriHub</title>
+  <link rel="icon" href="https://cdn.phototourl.com/free/2026-04-17-34afdbc3-383e-4a83-bee6-d9afb83d3bb6.png">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { darkMode: 'class' }
+  </script>
+
+  <script>
+  (function(){
+    const theme = localStorage.getItem("theme") || "system";
+
+    if(theme === "dark"){
+      document.documentElement.classList.add("dark");
+    }
+    else if(theme === "light"){
+      document.documentElement.classList.remove("dark");
+    }
+    else {
+      if(window.matchMedia('(prefers-color-scheme: dark)').matches){
+        document.documentElement.classList.add("dark");
+      }
+    }
+  })();
+  </script>
+</head>
+
+<body class="bg-gray-100 dark:bg-gray-900 text-black dark:text-white" onload="init('template')">
+  
+<!-- TOP BAR -->
+<div class="fixed top-0 left-0 w-full z-50 flex justify-between items-center p-3 bg-white dark:bg-gray-800 shadow">
+
+  <div class="flex items-center gap-2">
+    <img id="logo" class="h-8 rounded">
+    <div>
+      <div id="clientName" class="font-bold"></div>
+      <div class="text-xs text-gray-400">Admin</div>
+    </div>
+  </div>
+
+  <div class="relative">
+    <div onclick="toggleProfile()" class="flex items-center gap-2 cursor-pointer">
+      <div id="avatarCircle" class="w-8 h-8 rounded-full bg-yellow-400 flex items-center justify-center text-white font-bold"></div>
+      <div class="text-sm">
+        <div id="profileName" class="font-semibold"></div>
+        <div id="profileEmail" class="text-gray-400 text-xs"></div>
+      </div>
+    </div>
+
+    <div id="profileMenu" class="hidden absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 border rounded shadow p-2">
+      <p class="text-xs text-gray-400 mb-1">Mode</p>
+
+      <button onclick="setTheme('light')" class="block w-full text-left p-1">☀️ Light</button>
+      <button onclick="setTheme('dark')" class="block w-full text-left p-1">🌙 Dark</button>
+      <button onclick="setTheme('system')" class="block w-full text-left p-1">💻 System</button>
+
+      <hr class="my-2">
+      <button onclick="logout()" class="text-red-500 text-sm w-full text-left">Logout</button>
+    </div>
+  </div>
+
+</div>
+
+<div class="flex">
+
+  <!-- SIDEBAR (FIXED) -->
+  <div class="w-64 flex-none bg-white dark:bg-gray-800 shadow border-r dark:border-gray-700 p-4 fixed top-[60px] left-0 h-[calc(100vh-60px)] overflow-y-auto z-40 flex flex-col justify-between">
+    
+    <div>
+      <button id="menuDashboard" onclick="location.href='dashboard.html'" class="flex items-center w-full text-left px-4 py-2.5 rounded-lg mb-2 bg-transparent text-gray-600 dark:text-gray-300 hover:text-blue-600 hover:bg-transparent dark:hover:text-blue-400 dark:hover:bg-transparent transition duration-200 ease-in-out font-medium">
+        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+        Dashboard
+      </button>
+
+      <button id="menuMessage" onclick="location.href='message.html'" class="flex items-center w-full text-left px-4 py-2.5 rounded-lg mb-2 bg-transparent text-gray-600 dark:text-gray-300 hover:text-blue-600 hover:bg-transparent dark:hover:text-blue-400 dark:hover:bg-transparent transition duration-200 ease-in-out font-medium">
+        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+        Message
+      </button>
+
+      <button id="menuTemplate" onclick="location.href='template.html'" class="flex items-center w-full text-left px-4 py-2.5 rounded-lg mb-2 bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 font-bold transition duration-200 ease-in-out">
+        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"></path></svg>
+        Template
+      </button>
+
+      <button id="menuCampaign" onclick="location.href='campaign.html'" class="flex items-center w-full text-left px-4 py-2.5 rounded-lg mb-2 bg-transparent text-gray-600 dark:text-gray-300 hover:text-blue-600 hover:bg-transparent dark:hover:text-blue-400 dark:hover:bg-transparent transition duration-200 ease-in-out font-medium">
+        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"></path></svg>
+        Campaign
+      </button>
+
+      <button id="menuReport" onclick="location.href='report.html'" class="flex items-center w-full text-left px-4 py-2.5 rounded-lg mb-2 bg-transparent text-gray-600 dark:text-gray-300 hover:text-blue-600 hover:bg-transparent dark:hover:text-blue-400 dark:hover:bg-transparent transition duration-200 ease-in-out font-medium">
+        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+        Report
+      </button>
+
+      <button id="menuSettings" onclick="location.href='settings.html'" class="flex items-center w-full text-left px-4 py-2.5 rounded-lg mb-2 bg-transparent text-gray-600 dark:text-gray-300 hover:text-blue-600 hover:bg-transparent dark:hover:text-blue-400 dark:hover:bg-transparent transition duration-200 ease-in-out font-medium">
+        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <rect x="4" y="8" width="16" height="12" rx="2" ry="2"></rect>
+  <path d="M2 14h2"></path>
+  <path d="M20 14h2"></path>
+  <path d="M15 13v2"></path>
+  <path d="M9 13v2"></path>
+  <path d="M12 8V4"></path>
+  <path d="M12 4m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"></path>
+</svg>
+Chatbot Settings
+</button>
+
+      <button id="menuAccount" onclick="location.href='account.html'" class="flex items-center w-full text-left px-4 py-2.5 rounded-lg mb-2 bg-transparent text-gray-600 dark:text-gray-300 hover:text-blue-600 hover:bg-transparent dark:hover:text-blue-400 dark:hover:bg-transparent transition duration-200 ease-in-out font-medium">
+    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+    </svg>
+    Account & Webhooks
+</button>
+    </div>
+
+    <div>
+      <button onclick="logout()" class="w-full flex items-center justify-center bg-red-50 text-red-600 border border-red-200 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400 py-2 rounded-lg mt-4 shadow-sm font-bold hover:bg-red-100 dark:hover:bg-red-900/50 transition duration-200 ease-in-out">
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+        Logout
+      </button>
+      <div class="text-center mt-4 text-[10px] text-gray-400 dark:text-gray-500">
+        2026 © IntegriHub v1.0.0
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- CONTENT -->
+<div class="flex-1 ml-64 p-4 mt-[60px] overflow-y-auto h-[calc(100vh-60px)]">
+
+  <div id="templateView">
+
+    <div class="flex justify-between items-end mb-4 border-b dark:border-gray-700 pb-2">
+      <div class="flex gap-6">
+        <button id="tabMeta" onclick="switchTabTemplate('meta')" class="text-xl font-bold text-blue-500 border-b-2 border-blue-500 pb-1 transition">
+          Meta Templates
+        </button>
+        <button id="tabCanned" onclick="switchTabTemplate('canned')" class="text-xl font-bold text-gray-400 hover:text-blue-400 pb-1 transition border-b-2 border-transparent">
+          ⚡ Balasan Cepat
+        </button>
+      </div>
+
+      <div>
+        <button id="btnCreateTemplate" onclick="openCreateTemplate()" class="bg-blue-500 text-white px-3 py-2 rounded text-sm font-bold shadow transition">
+          + Create Meta Template
+        </button>
+        <button id="btnCreateCanned" onclick="openCannedModal()" class="hidden bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-2 rounded text-sm font-bold shadow transition">
+          + Buat Balasan Cepat
+        </button>
+      </div>
+    </div>
+
+   <h3 class="font-bold mb-2">List Template</h3>
+
+<!-- 🔍 SEARCH -->
+<div id="metaViewContainer">
+  <div class="flex justify-between items-center mb-4">
+    <input id="searchInput" type="text" placeholder="🔍 Search template" class="border px-3 py-2 rounded w-64 text-sm bg-white dark:bg-gray-800 text-black dark:text-white" oninput="handleSearch()" />
+  </div>
+
+  <table class="w-full border text-sm">
+    <thead class="bg-gray-200 dark:bg-gray-700">
+      <tr>
+        <th class="p-2">Nama</th>
+        <th class="p-2">Kategori</th>
+        <th class="p-2">Bahasa</th>
+        <th class="p-2">Status</th>
+        <th class="p-2">Aksi</th>
+        <th class="p-2">Created At</th>
+      </tr>
+    </thead>
+    <tbody id="templateList"></tbody>
+  </table>
+
+  <div class="flex justify-between items-center mt-4">
+    <div class="flex items-center gap-3">
+      <span id="templateInfo" class="text-sm text-gray-500 dark:text-gray-300"></span>
+      <select id="limitSelect" class="border px-2 py-1 rounded text-sm bg-white dark:bg-gray-800 text-black dark:text-white" onchange="changeLimit()">
+        <option value="10">10</option>
+        <option value="25">25</option>
+        <option value="50">50</option>
+        <option value="100">100</option>
+      </select>
+    </div>
+    <div id="paginationBox" class="flex gap-1 text-sm"></div>
+  </div>
+</div>
+
+<div id="cannedViewContainer" class="hidden">
+  <div class="flex justify-between items-center mb-2 mt-4">
+    <input id="searchCannedInput" type="text" placeholder="🔍 Search balasan cepat..." class="border px-3 py-2 rounded w-64 text-sm bg-white dark:bg-gray-800 text-black dark:text-white" oninput="handleSearchCanned()" />
+  </div>
+
+  <table class="w-full border text-sm mt-2">
+    <thead class="bg-yellow-100 dark:bg-yellow-900/30">
+      <tr>
+        <th class="p-2 text-left">Judul Shortcut</th>
+        <th class="p-2 text-left">Tipe</th>
+        <th class="p-2 text-left">Isi Pesan (Preview)</th>
+        <th class="p-2 text-center w-24">Aksi</th>
+      </tr>
+    </thead>
+    <tbody id="cannedTableBody">
+      </tbody>
+  </table>
+
+  <div class="flex justify-between items-center mt-4">
+    <div class="flex items-center gap-3">
+      <span id="cannedInfo" class="text-sm text-gray-500 dark:text-gray-300"></span>
+      <select id="cannedLimitSelect" class="border px-2 py-1 rounded text-sm bg-white dark:bg-gray-800 text-black dark:text-white" onchange="changeCannedLimit()">
+        <option value="10">10</option>
+        <option value="25">25</option>
+        <option value="50">50</option>
+      </select>
+    </div>
+    <div id="cannedPaginationBox" class="flex gap-1 text-sm"></div>
+  </div>
+</div>
+    
+</div>
+
+</div>
+
+
+<!-- 🔥 TARUH MODAL DI SINI -->
+<div id="templateModal"
+class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+
+<div class="bg-white dark:bg-gray-800 w-[600px] p-4 rounded max-h-[90vh] overflow-auto text-gray-900 dark:text-gray-100">
+<div id="stepForm">
+<h2 class="font-bold mb-3">Create Template</h2>
+
+
+<!-- NAME -->
+<input id="tplName" placeholder="Template Name"
+class="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-2 mb-2 rounded">
+
+<select id="tplLanguage"
+class="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-2 mb-2 rounded">
+  <option value="id">Indonesia</option>
+  <option value="en">English</option>
+</select>
+
+<label class="text-sm text-gray-700 dark:text-gray-300">Category</label>
+<select id="category" onchange="toggleCategory()"
+class="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-2 mb-2 rounded font-bold text-blue-600">
+  <option value="MARKETING">Marketing</option>
+  <option value="UTILITY">Utility</option>
+  <option value="AUTHENTICATION">Authentication</option>
+</select>
+
+<select id="tplHeaderType" onchange="toggleHeaderType()"
+class="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-2 mb-2 rounded">
+  <option value="">No Header</option>
+  <option value="text">Text</option>
+  <option value="media">Media</option>
+</select>
+
+<div id="headerTextBox" class="hidden mb-2">
+  <div class="flex gap-2 mb-1">
+    <button onclick="insertHeaderParam()" class="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-xs font-bold hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+      { } Tambah Parameter
+    </button>
+  </div>
+  <input id="tplHeader" placeholder="Header text (mendukung max 1 parameter {{1}})" oninput="livePreview()"
+  class="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-2 rounded">
+</div>
+
+<div id="mediaTypeBox" class="hidden mb-2">
+  <select id="tplHeaderMediaType" onchange="livePreview()"
+  class="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-2 mb-2 rounded">
+    <option value="">Select Media</option>
+    <option value="image">Image</option>
+    <option value="video">Video</option>
+    <option value="document">Document</option>
+  </select>
+  <input type="file" id="tplHeaderFile" onchange="livePreview()"
+  class="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-2 rounded">
+</div>
+
+<div id="bodyToolbar" class="flex gap-2 mb-1">
+  <button onclick="formatBold()" class="px-2 border border-gray-300 dark:border-gray-600 rounded font-bold">B</button>
+  <button onclick="formatItalic()" class="px-2 border border-gray-300 dark:border-gray-600 rounded italic">I</button>
+  <button onclick="insertParam()" class="px-2 border border-gray-300 dark:border-gray-600 rounded">{ }</button>
+</div>
+
+<textarea id="tplBody"
+placeholder="Halo {{1}} ..."
+maxlength="1024"
+class="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-2 mb-1 rounded"></textarea>
+
+<div id="bodyHelper" class="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-2">
+  <span>Maksimal 1024 karakter (termasuk parameter)</span>
+  <span id="bodyCounter">1024 tersisa</span>
+</div>
+
+<input id="tplFooter" oninput="livePreview()"
+placeholder="Footer (optional)"
+class="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-2 mb-2 rounded">
+
+<select id="tplButtonMode" onchange="toggleButtonMode()"
+class="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-2 mb-2 rounded">
+  <option value="">No Button</option>
+  <option value="cta">CTA (URL/Phone)</option>
+  <option value="quick">Quick Reply</option>
+  <option value="flow">Flow</option>
+</select>
+
+<div id="ctaSection" class="hidden mb-2">
+  <p class="text-xs font-bold mb-2 text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 p-2 rounded">
+    💡 Max 2 Website & 1 Phone Number
+  </p>
+  <div id="ctaBox"></div>
+  <button onclick="addCTA()" class="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-bold px-3 py-2 rounded w-full hover:opacity-80 transition mt-1">
+    + Add CTA Button
+  </button>
+</div>
+
+<div id="quickReplySection" class="hidden mb-2">
+  <p class="text-sm mb-1 text-gray-700 dark:text-gray-300">Quick Reply (max 10)</p>
+  <div id="quickReplyBox"></div>
+  <button onclick="addQuickReply()" class="text-xs text-blue-500 hover:underline">+ Add</button>
+</div>
+
+<div id="flowSection" class="hidden mb-2">
+  <input id="flowText" placeholder="Button text" oninput="livePreview()" class="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-2 mb-1 rounded">
+  <input id="flowId" placeholder="Flow ID" oninput="livePreview()" class="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-2 mb-1 rounded">
+  <input id="flowScreen" placeholder="Navigate Screen" oninput="livePreview()" class="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-2 rounded">
+</div>
+
+<div id="authSection" class="hidden mb-2 p-3 border rounded border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-900/10">
+  <p class="text-sm font-bold mb-3 flex items-center gap-2 text-blue-600 dark:text-blue-400">
+    🔒 Seting Template Authentication
+  </p>
+  
+  <label class="flex items-center gap-2 text-sm mb-3 cursor-pointer text-gray-700 dark:text-gray-300 font-semibold">
+    <input type="checkbox" id="authSecurity" onchange="livePreview()" checked class="w-4 h-4 text-blue-500"> 
+    Tambahkan rekomendasi keamanan
+  </label>
+  <label class="flex items-center gap-2 text-sm cursor-pointer text-gray-700 dark:text-gray-300 font-semibold">
+    <input type="checkbox" id="authExpire" onchange="livePreview()" class="w-4 h-4 text-blue-500"> 
+    Tambahkan peringatan kedaluwarsa
+  </label>
+</div>
+
+<!-- ACTION BUTTON -->
+<div class="flex gap-2 mt-3">
+
+  <button onclick="closeTemplateModal()"
+class="w-1/2 bg-gray-300 dark:bg-gray-600 text-gray-900 dark:text-gray-100 py-2 rounded">
+Cancel
+</button>
+
+<button id="continueBtn" onclick="goPreview()"
+class="w-1/2 bg-blue-500 hover:bg-blue-600 text-white py-2 rounded">
+Continue
+</button>
+
+</div>
+  
+</div>
+
+  <!-- STEP PREVIEW -->
+<div id="stepPreview" class="hidden mt-4">
+
+  <h2 class="font-bold mb-3">Preview Template</h2>
+
+  <div id="previewStepBox" class="bg-[#0b141a] p-3 rounded mb-3"></div>
+
+  <div class="flex gap-2">
+
+    <button onclick="backToForm()"
+      class="w-1/2 bg-gray-300 py-2 rounded">
+      Back
+    </button>
+
+    <button id="saveBtn" onclick="confirmSaveTemplate()" class="w-1/2 bg-green-500 hover:bg-green-600 font-bold text-white py-2 rounded transition">
+    Simpan & Ajukan
+    </button>
+
+  </div>
+
+</div>
+  
+</div>
+</div>
+
+
+  <div id="cannedModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+  <div class="bg-white dark:bg-gray-800 w-[500px] p-5 rounded-lg shadow-xl max-h-[90vh] overflow-y-auto text-gray-900 dark:text-gray-100">
+    <h2 class="text-lg font-bold mb-4 flex items-center gap-2">⚡ Buat Balasan Cepat</h2>
+
+    <div class="mb-3">
+      <label class="text-xs font-bold text-gray-500">Nama/Judul Shortcut (Untuk Agent)</label>
+      <input id="cannedTitle" placeholder="Misal: Format Order" class="w-full border dark:border-gray-600 p-2 rounded mt-1 bg-gray-50 dark:bg-gray-900 outline-none focus:border-yellow-500">
+    </div>
+
+    <div class="mb-3">
+      <label class="text-xs font-bold text-gray-500">Tipe Pesan</label>
+      <select id="cannedType" onchange="toggleCannedFields()" class="w-full border dark:border-gray-600 p-2 rounded mt-1 bg-gray-50 dark:bg-gray-900 outline-none focus:border-yellow-500 font-bold">
+        <option value="text">Teks Biasa</option>
+        <option value="button">Tombol (Quick Reply)</option>
+        <option value="list">Menu List (Max 10)</option>
+        <option value="flow">WhatsApp Flow</option>
+        <option value="cta">Call to Action (URL/Link)</option>
+      </select>
+    </div>
+
+    <div class="mb-3">
+      <label class="text-xs font-bold text-gray-500">Isi Pesan / Caption</label>
+      <textarea id="cannedMessage" rows="3" placeholder="Ketik isi pesan utama di sini..." class="w-full border dark:border-gray-600 p-2 rounded mt-1 bg-gray-50 dark:bg-gray-900 outline-none focus:border-yellow-500"></textarea>
+    </div>
+
+    <div class="mb-3 p-3 bg-gray-50 dark:bg-gray-700/30 rounded border dark:border-gray-600">
+      <label class="text-xs font-bold text-gray-500">Media Pendukung (Opsional, Max 5MB)</label>
+      <div class="flex gap-2 items-center mt-1">
+        <input type="file" id="cannedMedia" accept="image/*,video/*,application/pdf" class="w-full text-sm outline-none">
+        <button id="btnHapusMedia" onclick="hapusMediaCanned()" class="hidden text-red-500 text-xs font-bold hover:underline whitespace-nowrap">Hapus File</button>
+      </div>
+      <div id="cannedMediaPreview" class="text-xs text-blue-500 mt-1 truncate font-semibold hidden"></div>
+      
+      <input type="hidden" id="cannedMediaUrl">
+      <input type="hidden" id="cannedMediaType">
+    </div>
+
+    <div id="cannedDynamicArea" class="bg-gray-50 dark:bg-gray-900/50 p-3 rounded border dark:border-gray-700 mb-4 hidden">
+      
+      <div id="cannedBtnArea" class="hidden">
+        <label class="text-xs font-bold text-gray-500 mb-2 block">Teks Tombol (Max 3)</label>
+        <input id="cannedBtn1" placeholder="Tombol 1" class="w-full border dark:border-gray-600 p-2 rounded text-sm bg-white dark:bg-gray-800 mb-1">
+        <input id="cannedBtn2" placeholder="Tombol 2 (Opsional)" class="w-full border dark:border-gray-600 p-2 rounded text-sm bg-white dark:bg-gray-800 mb-1">
+        <input id="cannedBtn3" placeholder="Tombol 3 (Opsional)" class="w-full border dark:border-gray-600 p-2 rounded text-sm bg-white dark:bg-gray-800">
+      </div>
+
+      <div id="cannedFlowArea" class="hidden space-y-2">
+        <div>
+          <label class="text-xs font-bold text-gray-500">Teks Tombol Buka Flow</label>
+          <input id="cannedFlowBtn" placeholder="Contoh: Isi Formulir" class="w-full border dark:border-gray-600 p-2 rounded text-sm bg-white dark:bg-gray-800">
+        </div>
+        <div>
+          <label class="text-xs font-bold text-gray-500">Flow ID (Dari Meta)</label>
+          <input id="cannedFlowId" placeholder="Misal: 1234567890" class="w-full border dark:border-gray-600 p-2 rounded text-sm bg-white dark:bg-gray-800">
+        </div>
+        <div>
+          <label class="text-xs font-bold text-gray-500">Navigate Screen / Screen ID</label>
+          <input id="cannedFlowScreen" placeholder="Misal: START_SCREEN" class="w-full border dark:border-gray-600 p-2 rounded text-sm bg-white dark:bg-gray-800">
+        </div>
+      </div>
+
+      <div id="cannedCtaArea" class="hidden space-y-2">
+        <div>
+          <label class="text-xs font-bold text-gray-500">Teks Tombol Link</label>
+          <input id="cannedCtaText" placeholder="Contoh: Kunjungi Web" class="w-full border dark:border-gray-600 p-2 rounded text-sm bg-white dark:bg-gray-800">
+        </div>
+        <div>
+          <label class="text-xs font-bold text-gray-500">URL</label>
+          <input id="cannedCtaUrl" placeholder="Contoh: https://integrihub.com" class="w-full border dark:border-gray-600 p-2 rounded text-sm bg-white dark:bg-gray-800">
+        </div>
+      </div>
+
+      <div id="cannedListArea" class="hidden">
+        <label class="text-xs font-bold text-gray-500 mb-1 block">Teks Tombol Menu</label>
+        <input id="cannedListTitle" placeholder="Contoh: Lihat Menu" class="w-full border dark:border-gray-600 p-2 rounded text-sm bg-white dark:bg-gray-800 mb-3">
+        
+        <label class="text-xs font-bold text-gray-500 mb-1 block flex justify-between">
+          <span>Daftar Pilihan Menu</span>
+          <span class="text-blue-500 cursor-pointer hover:underline" onclick="addCannedListItem()">+ Tambah</span>
+        </label>
+        <div id="cannedListItemsBox" class="space-y-2 max-h-32 overflow-y-auto pr-1">
+          </div>
+      </div>
+
+    </div>
+
+    <div class="flex gap-2 mt-4 pt-4 border-t dark:border-gray-700">
+      <button onclick="closeCannedModal()" class="w-1/2 bg-gray-300 dark:bg-gray-600 text-gray-900 dark:text-gray-100 py-2 rounded font-bold hover:opacity-80">Batal</button>
+      <button onclick="saveCannedResponse()" class="w-1/2 bg-yellow-500 text-white py-2 rounded font-bold hover:bg-yellow-600">Simpan Template</button>
+    </div>
+  </div>
+</div> 
+
+ <!-- PREVIEW MODAL -->
+<div id="previewModal"
+class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-[9999]">
+
+  <div class="bg-[#0b141a] w-[350px] rounded-lg p-3">
+
+    <!-- HEADER WA -->
+    <div class="flex items-center gap-2 mb-3">
+      <div class="w-8 h-8 bg-gray-500 rounded-full"></div>
+      <div>
+        <div class="text-white text-sm font-semibold">Preview</div>
+        <div class="text-xs text-gray-400">online</div>
+      </div>
+    </div>
+
+    <!-- CHAT BUBBLE -->
+    <div id="previewBox" class="flex justify-end"></div>
+
+    <!-- CLOSE -->
+    <button onclick="closePreview()"
+      class="mt-3 w-full bg-red-500 text-white py-1 rounded">
+      Close
+    </button>
+
+  </div>
+</div>
+
+<div id="cannedDetailModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-[60]">
+  <div class="bg-white dark:bg-gray-800 w-[450px] p-5 rounded-lg shadow-xl max-h-[90vh] overflow-y-auto text-gray-900 dark:text-gray-100">
+    <h2 class="text-lg font-bold mb-4 flex items-center gap-2 border-b dark:border-gray-700 pb-2">
+      👁️ Detail Balasan Cepat
+    </h2>
+    
+    <div id="cannedDetailContent" class="space-y-4 text-sm">
+      </div>
+
+    <div class="mt-6 pt-4 border-t dark:border-gray-700 flex justify-end">
+      <button onclick="closeCannedDetail()" class="bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500 text-gray-900 dark:text-gray-100 px-5 py-2 rounded font-bold transition">
+        Tutup
+      </button>
+    </div>
+  </div>
+</div>
+  
+<script src="app.js"></script>
+<script src="free-form.js"></script>
+
+</body>
+</html>

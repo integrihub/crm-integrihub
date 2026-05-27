@@ -1,0 +1,1560 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Agent Dashboard - IntegriHub</title>
+  <link rel="icon" href="https://cdn.phototourl.com/free/2026-04-17-34afdbc3-383e-4a83-bee6-d9afb83d3bb6.png">
+<script>  
+// APPLY THEME
+(function(){
+  const theme = localStorage.getItem("theme") || "system";
+  const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+  if(theme === "dark") document.documentElement.classList.add("dark");
+  else if(theme === "light") document.documentElement.classList.remove("dark");
+  else isDark
+    ? document.documentElement.classList.add("dark")
+    : document.documentElement.classList.remove("dark");
+})();
+</script>
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <script>
+  tailwind.config = {
+    darkMode: 'class'
+  }
+  </script>
+<script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@^1/index.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body class="bg-gray-100 dark:bg-gray-900 text-black dark:text-white h-screen overflow-hidden flex flex-col" onload="init()">
+
+<div class="flex justify-between items-center p-3 bg-white dark:bg-gray-800 shadow">
+
+  <div class="flex items-center gap-3">
+    <img id="logo" class="max-h-10 w-auto max-w-[150px] object-contain rounded">
+    <div>
+      <div id="clientName" class="font-bold text-sm"></div>
+      <div class="text-xs text-gray-400">Agent Panel</div>
+    </div>
+  </div>
+  
+  <div class="relative">
+    <div onclick="toggleProfile()" class="flex items-center gap-2 cursor-pointer profile-trigger">
+
+      <div id="avatarCircle"
+        class="w-8 h-8 rounded-full bg-yellow-400 flex items-center justify-center text-white font-bold"></div>
+
+      <div class="text-sm">
+        <div id="profileName" class="font-semibold"></div>
+        <div id="profileEmail" class="text-gray-400 text-xs"></div>
+      </div>
+    </div>
+
+    <div id="profileMenu"
+      class="hidden absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 border rounded shadow p-2 z-50">
+
+      <p class="text-xs text-gray-400 mb-1">Mode</p>
+
+      <button onclick="setTheme('light')" class="block w-full text-left p-1 hover:bg-gray-100 dark:hover:bg-gray-700">☀️ Light</button>
+      <button onclick="setTheme('dark')" class="block w-full text-left p-1 hover:bg-gray-100 dark:hover:bg-gray-700">🌙 Dark</button>
+      <button onclick="setTheme('system')" class="block w-full text-left p-1 hover:bg-gray-100 dark:hover:bg-gray-700">💻 System</button>
+
+      <hr class="my-2">
+
+      <button onclick="logout()" class="text-red-500 text-sm w-full text-left">Logout</button>
+    </div>
+  </div>
+</div>
+
+<div class="flex-1 flex min-h-0">
+
+ <div class="w-64 flex-none bg-white dark:bg-gray-800 shadow border-r dark:border-gray-700 p-4 flex flex-col justify-between overflow-y-auto z-10">
+    
+    <div>
+      <a href="?page=dashboard" id="menuDashboard" onclick="navigateMenu(event, 'dashboard')" class="menu-btn flex items-center w-full text-left px-4 py-2.5 rounded-lg mb-2 text-gray-600 dark:text-gray-300 font-medium transition duration-200">
+        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+        Dashboard
+      </a>
+
+      <a href="?page=message" id="menuMessage" onclick="navigateMenu(event, 'message')" class="menu-btn flex items-center w-full text-left px-4 py-2.5 rounded-lg mb-2 text-gray-600 dark:text-gray-300 font-medium transition duration-200">
+        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+        Message
+      </a>
+    </div>
+
+    <div>
+      <button onclick="logout()" class="w-full flex items-center justify-center bg-red-50 text-red-600 border border-red-200 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400 py-2 rounded-lg shadow-sm font-bold hover:bg-red-100 dark:hover:bg-red-900/50 transition duration-200 ease-in-out">
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+        Logout
+      </button>
+      <div class="text-center mt-4 text-[10px] text-gray-400 dark:text-gray-500 font-medium">
+        2026 © IntegriHub v1.0.0
+      </div>
+    </div>
+
+  </div>
+
+  <div class="flex-1 p-4 overflow-hidden">
+
+    <div id="dashboardView" class="h-full flex flex-col p-6 overflow-y-auto">
+
+      <h1 class="text-3xl font-bold text-center mb-6 mt-2">
+        Selamat Datang <br>
+        <span id="welcomeBig"></span>
+      </h1>
+
+      <div class="grid grid-cols-4 gap-4 mb-6">
+        <div class="bg-white dark:bg-gray-800 p-4 rounded shadow text-center border-b-4 border-blue-500">
+          <p class="text-gray-500 text-sm font-bold">Total Chat</p>
+          <h2 id="totalChat" class="text-2xl font-black mt-1">0</h2>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 p-4 rounded shadow text-center border-b-4 border-green-500">
+          <p class="text-gray-500 text-sm font-bold">Incoming</p>
+          <h2 id="incomingChat" class="text-2xl font-black text-green-500 mt-1">0</h2>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 p-4 rounded shadow text-center border-b-4 border-yellow-500">
+          <p class="text-gray-500 text-sm font-bold">Outgoing</p>
+          <h2 id="outgoingChat" class="text-2xl font-black text-yellow-500 mt-1">0</h2>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 p-4 rounded shadow text-center border-b-4 border-gray-500">
+          <p class="text-gray-500 text-sm font-bold">Resolved</p>
+          <h2 id="resolvedChat" class="text-2xl font-black text-gray-500 mt-1">0</h2>
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-gray-800 p-4 rounded shadow flex-1 min-h-[400px] relative w-full mb-4">
+        <canvas id="chart"></canvas>
+      </div>
+
+    </div>
+
+    <div id="chatWrapper" class="hidden flex gap-4 h-full">
+
+      <div class="w-1/3 bg-white dark:bg-gray-800 rounded shadow p-3 flex flex-col">
+        <h2 class="font-bold mb-3 text-gray-800 dark:text-white">My Chats</h2>
+        
+        <div class="mb-3">
+          <input type="text" id="searchChatInput" onkeyup="handleChatSearch()" placeholder="Cari nama atau nomor..." class="w-full border border-gray-200 dark:border-gray-700 p-2 rounded text-sm bg-gray-50 dark:bg-gray-900 outline-none focus:border-green-500 mb-3 transition text-gray-800 dark:text-white">
+          
+          <div class="flex gap-2 overflow-x-auto pb-1 text-[11px] font-semibold no-scrollbar">
+            <button onclick="setChatFilter('all')" id="tab-all" class="tab-btn px-3 py-1.5 rounded-full bg-green-500 text-white whitespace-nowrap shadow-sm transition">All</button>
+            <button onclick="setChatFilter('unread')" id="tab-unread" class="tab-btn px-3 py-1.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 whitespace-nowrap transition">Unread</button>
+            <button onclick="setChatFilter('resolved')" id="tab-resolved" class="tab-btn px-3 py-1.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 whitespace-nowrap transition flex items-center gap-1">
+              Resolved <span id="resolvedBadge" class="hidden bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded-full">0</span>
+            </button>
+          </div>
+        </div>
+
+        <div id="chatList" class="flex-1 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700 pr-1"></div>
+      </div>
+
+      <div class="flex-1 bg-white dark:bg-gray-800 rounded shadow flex flex-col min-w-0 overflow-hidden relative">
+
+        <div id="emptyState" class="flex-1 flex items-center justify-center text-gray-400 absolute inset-0 bg-white dark:bg-gray-800 z-10">
+          <div class="text-center">
+            <div class="text-5xl mb-3">💬</div>
+            <p>Pilih chat untuk mulai percakapan</p>
+          </div>
+        </div>
+
+        <div id="chatContent" class="hidden flex flex-col h-full overflow-hidden">
+          
+          <div class="p-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-white dark:bg-gray-800 flex-none">
+            <div class="flex items-center gap-3">
+              <img id="avatar" class="h-10 w-10 rounded-full border border-gray-200 dark:border-gray-700">
+              <div>
+                <h2 id="chatName" class="font-bold text-gray-800 dark:text-white"></h2>
+                <p id="chatNumber" class="text-xs text-gray-500"></p>
+              </div>
+            </div>
+            <button id="btnResolve" onclick="toggleResolveChat()" class="text-green-600 bg-green-50 hover:bg-green-100 dark:bg-green-900/20 px-3 py-1.5 rounded text-xs font-bold transition border border-green-200 dark:border-green-800">✅ Resolve</button>
+          </div>
+
+          <div id="chatBox" class="flex-1 overflow-y-auto p-3 space-y-2 bg-gray-50 dark:bg-gray-900 relative"></div>
+          
+          <div id="filePreviewBox" class="flex-none px-3 pt-1 bg-white dark:bg-gray-800"></div>
+          
+          <div id="resolvedBanner" class="hidden flex-none p-3 bg-red-50 dark:bg-red-900/20 text-red-500 text-xs text-center border-t border-red-100 dark:border-red-800 transition">
+            Percakapan telah ditutup.<br>Klik <b>"🔄 Reopen Chat"</b> di atas untuk membuka percakapan.
+          </div>
+
+          <div id="chatInputArea" class="p-2 border-t flex items-center gap-2 flex-none bg-white dark:bg-gray-800 relative">
+            <button onclick="toggleEmoji()" class="text-xl hover:scale-110 transition">😊</button>
+
+            <div id="emojiBox" class="hidden fixed bottom-20 left-80 bg-white border rounded shadow z-50">
+              <emoji-picker></emoji-picker>
+            </div>
+
+            <div class="relative">
+              <button onclick="toggleCanned()" class="text-xl hover:scale-110 transition" title="Balasan Cepat (Free Form)">⚡</button>
+              
+              <div id="cannedBox" class="hidden absolute bottom-10 left-0 w-64 bg-white dark:bg-gray-800 border dark:border-gray-600 rounded shadow-lg z-50 max-h-64 overflow-y-auto">
+                <div class="p-2 border-b dark:border-gray-600 font-bold text-sm bg-gray-100 dark:bg-gray-700">⚡ Balasan Cepat</div>
+                <div id="cannedList" class="p-1">
+                  </div>
+              </div>
+            </div>
+
+            <input type="file" id="file" class="hidden" onchange="uploadFile()">
+            <button onclick="document.getElementById('file').click()" class="text-xl hover:scale-110 transition">📎</button>
+
+            <textarea id="msg" rows="1" onkeydown="handleKey(event)" class="flex-1 border border-gray-300 dark:border-gray-600 p-2 rounded text-sm bg-gray-100 dark:bg-gray-700 text-black dark:text-white resize-none outline-none focus:border-green-500 transition"></textarea>
+
+            <button onclick="send()" id="sendBtn" class="px-4 py-2 bg-green-500 text-white rounded font-bold hover:bg-green-600 transition">Send</button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const API = window.location.hostname.includes("staging") || 
+            window.location.hostname.includes("pages.dev") || 
+            window.location.hostname.includes("localhost") || 
+            window.location.hostname.includes("127.0.0.1")
+  ? "https://api-staging.crm.integrihub.my.id"
+  : "https://api-crm.integrihub.my.id";
+  
+const MEDIA_BASE = API + "/media/";
+const CID=localStorage.getItem("client_id");
+const EMAIL=localStorage.getItem("email");
+
+let selected=null;
+let LAST_ASSIGNED_IDS=[];
+let ALL_MESSAGES=[];
+let CLIENT=null;
+let fileData=null;
+let fileType=null;
+let isUserScrollingUp = false;
+let LAST_RENDER_IDS = "";
+let LAST_RENDER_HTML = "";
+let fileName=null;
+let filePreview=null;
+let fileMime=null;
+let isSending = false;
+
+let allTemplates = []; 
+
+// UI STATE
+let activeChatFilter = 'all';
+let chatSearchQuery = '';
+let processedChatMap = {}; 
+
+function handleChatSearch() {
+  chatSearchQuery = document.getElementById("searchChatInput").value.toLowerCase();
+  renderChatListUI();
+}
+
+function setChatFilter(filter) {
+  activeChatFilter = filter;
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.classList.remove('bg-green-500', 'text-white');
+    btn.classList.add('bg-gray-100', 'dark:bg-gray-700', 'text-gray-500', 'dark:text-gray-300');
+  });
+  const activeBtn = document.getElementById('tab-' + filter);
+  if(activeBtn) {
+     activeBtn.classList.remove('bg-gray-100', 'dark:bg-gray-700', 'text-gray-500', 'dark:text-gray-300');
+     activeBtn.classList.add('bg-green-500', 'text-white');
+  }
+  renderChatListUI();
+}
+
+//Toogle Resolve Chat
+  async function toggleResolveChat() {
+  if(!selected) return;
+
+  const btnResolve = document.getElementById("btnResolve");
+  // Cek status saat ini dari processedChatMap
+  const isCurrentlyResolved = processedChatMap[selected]?.is_closed;
+  const newStatus = isCurrentlyResolved ? 0 : 1; 
+
+  btnResolve.disabled = true;
+  btnResolve.innerText = "⏳...";
+
+  try {
+    const res = await fetch(API + "/resolve-chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        client_id: CID,
+        number: selected,
+        is_closed: newStatus
+      })
+    });
+
+    const data = await res.json();
+    if(!res.ok || data.error) throw new Error(data.error || "Gagal server");
+
+    // 🔥 Setelah berhasil di API, baru panggil load untuk update UI
+    await load();
+    
+  } catch (err) {
+    console.error("RESOLVE ERROR:", err);
+    alert("Gagal update status resolve: " + err.message);
+  } finally {
+    btnResolve.disabled = false;
+  }
+}
+
+// 🔥 SMART DATE FORMATTER (Full WIB Indonesia)
+function formatTimeShort(t) {
+  if(!t) return '';
+  const date = new Date(t.replace(" ", "T"));
+  const now = new Date();
+  
+  // Opsi zona waktu WIB (Jakarta)
+  const tzOptions = { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' };
+  
+  // Ambil tanggal murni (DD/MM/YYYY) berdasarkan WIB
+  const dateWIB = date.toLocaleDateString("id-ID", tzOptions);
+  const todayWIB = now.toLocaleDateString("id-ID", tzOptions);
+  
+  // Hitung tanggal kemarin berdasarkan WIB
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  const yesterdayWIB = yesterday.toLocaleDateString("id-ID", tzOptions);
+
+  if (dateWIB === todayWIB) {
+    // Jika hari ini: Jam Menit (Misal: 14:30)
+    return date.toLocaleTimeString("id-ID", { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit' });
+  } else if (dateWIB === yesterdayWIB) {
+    // Jika kemarin
+    return "Kemarin"; 
+  } else {
+    // Jika sudah lampau: DD/MM/YYYY (Misal: 10/05/2026)
+    return dateWIB;
+  }
+}
+
+  
+//INIT PROFILE
+function initProfile(){
+  const email = EMAIL || "user@mail.com";
+  profileEmail.innerText = email;
+  profileName.innerText = email.split("@")[0];
+  avatarCircle.innerText = email[0].toUpperCase();
+}
+
+function toggleProfile(){
+  profileMenu.classList.toggle("hidden");
+}
+
+window.addEventListener("click", e=>{
+ if(!e.target.closest("#profileMenu") && !e.target.closest(".profile-trigger")){
+   profileMenu.classList.add("hidden");
+ }
+});
+
+function setTheme(mode){
+ localStorage.setItem("theme", mode);
+ location.reload();
+}
+
+function setActiveMenu(menuId){
+  document.querySelectorAll(".menu-btn").forEach(btn=>{
+    // 1. Hapus background inline bawaan lama biar tidak bentrok
+    btn.style.background = ""; 
+    
+    // 2. Bersihkan semua class aktif (hijau jreng maupun biru soft) saat reset
+    btn.classList.remove("bg-green-500", "text-white", "bg-blue-50", "dark:bg-blue-900/30", "text-blue-400", "font-bold");
+    
+    // 3. Kembalikan ke warna dasar menu biasa saat tidak aktif
+    btn.classList.add("bg-transparent", "text-gray-600", "dark:text-gray-300", "font-medium");
+  });
+
+  const active = document.getElementById(menuId);
+  if(active){
+    // Hapus dulu kelas dasarnya sebelum dipasang warna aktif
+    active.classList.remove("bg-transparent", "text-gray-600", "dark:text-gray-300", "font-medium");
+    
+    // Kondisi pengecekan mode tema
+    if(document.documentElement.classList.contains("dark")) {
+      // Pas DARK MODE: Kasih Biru Soft Adem + Teks Biru + Font Tebal
+      active.classList.add("bg-blue-900/30", "text-blue-400", "font-bold");
+    } else {
+      // Pas LIGHT MODE: Kasih Hijau Jreng + Teks Putih + Font Tebal
+      active.classList.add("bg-green-500", "text-white", "font-bold");
+    }
+  }
+}
+
+// ================= NAVIGASI MENU (ANTI-REFRESH & NEW TAB SUPPORT) =================
+function navigateMenu(e, page) {
+  // Cegah refresh saat klik kiri biasa
+  e.preventDefault(); 
+  
+  // Ubah URL di atas secara rapi tanpa loading
+  window.history.pushState({}, '', '?page=' + page); 
+  
+  // Panggil fungsi tampilan
+  if (page === 'dashboard') showDashboard();
+  if (page === 'message') showMessage();
+}
+
+// Tambahan aman: Handle tombol Back/Forward di browser
+window.addEventListener('popstate', () => {
+  const params = new URLSearchParams(window.location.search);
+  const page = params.get("page") || "dashboard";
+  if (page === 'dashboard') showDashboard();
+  if (page === 'message') showMessage();
+});  
+
+// ================= FREE FORM / CANNED RESPONSES =================
+let CANNED_DATA = [];
+
+async function fetchCannedResponses() {
+  try {
+    const res = await fetch(`${API}/get-canned?client_id=${CID}`);
+    CANNED_DATA = await res.json();
+    renderCannedList();
+  } catch(e) {
+    console.error("Gagal load canned data", e);
+  }
+}
+
+function toggleCanned() {
+  const box = document.getElementById("cannedBox");
+  box.classList.toggle("hidden");
+  if (!box.classList.contains("hidden")) {
+     fetchCannedResponses(); // Fetch terbaru setiap kali dibuka
+  }
+}
+
+function renderCannedList() {
+  const listEl = document.getElementById("cannedList");
+  if (CANNED_DATA.length === 0) {
+    listEl.innerHTML = `<div class="p-3 text-xs text-center text-gray-500">Belum ada balasan cepat.</div>`;
+    return;
+  }
+
+  listEl.innerHTML = CANNED_DATA.map(item => `
+    <div onclick="selectCanned(${item.id})" class="p-2 text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 border-b dark:border-gray-600 last:border-0 flex items-center justify-between transition">
+      <span>${item.title}</span>
+      <span class="text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded uppercase font-bold">${item.type}</span>
+    </div>
+  `).join('');
+}
+
+async function fetchCannedResponses() {
+  try {
+    const res = await fetch(`${API}/get-canned?client_id=${CID}`);
+    CANNED_DATA = await res.json();
+    renderCannedList();
+  } catch(e) {
+    console.error("Gagal load canned data", e);
+  }
+}
+
+  
+async function selectCanned(id) {
+  document.getElementById("cannedBox").classList.add("hidden");
+  if(!selected) return alert("Pilih chat customer terlebih dahulu!");
+  
+  const item = CANNED_DATA.find(x => x.id === id);
+  if(!item) return;
+
+  const amanMediaType = item.media_type || "image";
+  
+  // Ekstensi dinamis
+  let ext = ".pdf";
+  if (amanMediaType === "image") ext = ".jpg";
+  if (amanMediaType === "video") ext = ".mp4";
+  const amanFileName = "Lampiran_" + item.title.replace(/[^a-zA-Z0-9]/g, "_") + ext;
+
+  // ==========================================
+  // JIKA TIPE TEXT
+  // ==========================================
+  if(item.type === "text") {
+    if(item.media_url) {
+      if(!confirm(`Kirim balasan cepat [${item.title}] (beserta file) sekarang?`)) return;
+      
+      let finalCaption = item.message;
+      if (amanMediaType === "video") {
+        finalCaption += `<br><br><div class="text-xs text-gray-500 bg-black/10 dark:bg-black/30 p-2 rounded">🎥 Video Terlampir: <a href="${item.media_url}" target="_blank" class="text-blue-500 hover:underline">Buka Video</a></div>`;
+      }
+
+      return sendDirectCanned(item, {
+        type: amanMediaType,
+        media_url: item.media_url,
+        message: finalCaption,
+        fileName: amanFileName
+      });
+    } else {
+      const msgInput = document.getElementById("msg");
+      msgInput.value = item.message;
+      msgInput.focus();
+      return;
+    }
+  }
+
+  // ==========================================
+  // JIKA TIPE INTERACTIVE (Button/List/Flow/CTA)
+  // ==========================================
+  let interactivePayload = {
+    type: item.type,
+    body: { text: item.message }
+  };
+
+  if(item.media_url) {
+    interactivePayload.header = { type: amanMediaType };
+    if(amanMediaType === "image") interactivePayload.header.image = { link: item.media_url };
+    else if(amanMediaType === "video") interactivePayload.header.video = { link: item.media_url };
+    else if(amanMediaType === "document") interactivePayload.header.document = { link: item.media_url, filename: amanFileName };
+  }
+
+  // 🔥 VISUAL BUILDER BUBBLE CHAT (Format Garis & Teks Biru)
+  let visualMessage = item.message;
+
+  // Kasih info kalau ada media (Khususnya video/dokumen biar Agent bisa nge-klik)
+  if (item.media_url) {
+    let icon = amanMediaType === "video" ? "🎥 Video" : (amanMediaType === "image" ? "🖼️ Gambar" : "📄 Dokumen");
+    visualMessage += `\n\n<div class="text-[11px] bg-black/10 dark:bg-white/10 p-1.5 rounded text-gray-700 dark:text-gray-300 font-semibold">${icon} Terlampir: <a href="${item.media_url}" target="_blank" class="text-blue-600 dark:text-blue-400 hover:underline">Buka File</a></div>`;
+  }
+
+  let interactiveHtml = ""; // Wadah penampung tombol visual
+
+  if(item.type === "button") {
+    let btns = JSON.parse(item.buttons_json || "[]");
+    interactivePayload.action = { buttons: btns.map((text, i) => ({ type: "reply", reply: { id: "btn_"+i, title: text } })) };
+    // Bikin tombol visual warna biru
+    interactiveHtml = btns.map(b => `<div class="text-blue-600 dark:text-blue-400 font-semibold text-[13.5px] mt-1.5 flex items-center gap-1.5">↩️ ${b}</div>`).join("");
+  }
+  else if(item.type === "list") {
+    delete interactivePayload.header; // WA melarang gambar di Menu List
+    let listData = JSON.parse(item.list_json || "[]");
+    interactivePayload.action = {
+      button: item.list_title || "Pilih Menu",
+      sections: [{ title: "Pilihan Tersedia", rows: listData.map((row, i) => ({ id: "list_"+i, title: row.title, description: row.description || "" })) }]
+    };
+    // Bikin list visual warna biru
+    interactiveHtml = `<div class="text-blue-600 dark:text-blue-400 font-semibold text-[13.5px] mt-1.5 flex items-center gap-1.5">☰ ${item.list_title || 'Pilih Menu'}</div>`;
+  }
+  else if(item.type === "cta") {
+    const isLink = item.cta_url.startsWith("http://") || item.cta_url.startsWith("https://");
+    if (isLink) {
+      interactivePayload.type = "cta_url";
+      interactivePayload.action = { name: "cta_url", parameters: { display_text: item.cta_text, url: item.cta_url } };
+    } else {
+      interactivePayload.type = "cta_call";
+      interactivePayload.action = { name: "cta_call", parameters: { display_text: item.cta_text, phone_number: item.cta_url } };
+    }
+    // Bikin CTA visual warna biru
+    interactiveHtml = `<div class="text-blue-600 dark:text-blue-400 font-semibold text-[13.5px] mt-1.5 flex items-center gap-1.5">🔗 ${item.cta_text}</div>`;
+  }
+  else if(item.type === "flow") {
+    interactivePayload.action = {
+      name: "flow",
+      parameters: {
+        flow_message_version: "3", flow_token: "flow_" + Date.now(), flow_id: item.flow_id, flow_cta: item.flow_button_text || "Buka",
+        flow_action: "navigate", flow_action_payload: { screen: item.flow_screen }
+      }
+    };
+    // Bikin flow visual warna biru
+    interactiveHtml = `<div class="text-blue-600 dark:text-blue-400 font-semibold text-[13.5px] mt-1.5 flex items-center gap-1.5">📋 ${item.flow_button_text || 'Buka Flow'}</div>`;
+  }
+
+  // 🔥 JAHIT GARIS PEMBATAS DENGAN TOMBOL VISUALNYA
+  if (interactiveHtml !== "") {
+    visualMessage += `<hr class="border-gray-300 dark:border-gray-600/70 my-2">${interactiveHtml}`;
+  }
+
+  if(!confirm(`Kirim balasan cepat [${item.title}] sekarang?`)) return;
+  
+  sendDirectCanned(item, {
+    type: "interactive",
+    interactive_data: interactivePayload,
+    message: visualMessage, // HTML visual ini yang akan tersimpan di DB
+    media_url: item.media_url, 
+    fileName: amanFileName
+  });
+}
+
+// Helper pengirim (Biar kodenya nggak kepanjangan)
+async function sendDirectCanned(item, payloadConfig) {
+  isSending = true;
+  sendBtn.innerHTML = `<span class="animate-pulse">⏳ Sending...</span>`;
+  sendBtn.disabled = true;
+
+  try {
+    const finalPayload = {
+      receiver: selected,
+      client_id: CID,
+      agent_email: EMAIL,
+      assigned_to: EMAIL,
+      ...payloadConfig
+    };
+
+    const token = localStorage.getItem("bearer_token") || "";
+    await fetch(API+"/send-message",{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json",
+        "Authorization": "Bearer " + token
+      },
+      body:JSON.stringify(finalPayload)
+    });
+  } catch(err){
+    console.log("SEND CANNED ERROR:", err);
+  }
+
+  isSending = false;
+  sendBtn.innerHTML = "Send";
+  sendBtn.disabled = false;
+  load(); // Refresh chat
+}
+  
+// Tutup popup kalau klik sembarang
+window.addEventListener("click", function(e) {
+  const box = document.getElementById("cannedBox");
+  if (!e.target.closest("#cannedBox") && !e.target.closest("button[onclick='toggleCanned()']")) {
+    if (box) box.classList.add("hidden");
+  }
+});
+  
+// ================= INIT =================
+async function init(){
+  initProfile();
+  await loadBranding();
+
+  // 🔥 TAMBAHAN: Tarik data template agar Chatbot Button terbaca
+  try {
+    const resTpl = await fetch(API + "/templates?client_id=" + CID);
+    const rawTpl = await resTpl.json();
+    if(Array.isArray(rawTpl)) allTemplates = rawTpl;
+  } catch(e) { 
+    console.log("Gagal load cache template", e); 
+  }
+
+ // BACA URL PARAMETER DULU
+  const params = new URLSearchParams(window.location.search);
+  let currentPage = params.get("page");
+
+  // Kalau URL kosong (baru buka web), baca dari localStorage
+  if (!currentPage) {
+    currentPage = localStorage.getItem("agent_last_menu") || "dashboard";
+    // Paksa update URL agar sinkron
+    window.history.replaceState({}, '', '?page=' + currentPage);
+  }
+
+  // Tampilkan menu yang sesuai
+  if (currentPage === "message") {
+    showMessage();
+  } else {
+    showDashboard();
+  }
+
+  await load();
+
+  const chatBoxEl = document.getElementById("chatBox");
+  if(chatBoxEl) {
+      chatBoxEl.addEventListener("scroll", () => {
+        const threshold = 100;
+        const isNearBottom = chatBoxEl.scrollHeight - chatBoxEl.scrollTop - chatBoxEl.clientHeight < threshold;
+        isUserScrollingUp = !isNearBottom;
+      });
+  }
+
+  LAST_ASSIGNED_IDS = ALL_MESSAGES.filter(m => m && m.assigned_to===EMAIL).map(m=>m.id);
+
+  setInterval(load, 2000);
+  setTimeout(setupEmoji, 500);
+}
+
+// ================= BRANDING =================
+async function loadBranding(){
+ try {
+     const res = await fetch(API+"/client-info?client_id="+CID);
+     CLIENT = await res.json();
+
+     logo.src=CLIENT.logo_url;
+     clientName.innerText=CLIENT.name;
+
+     const w = document.getElementById("welcome");
+     if(w) w.innerText="Selamat Datang "+CLIENT.name+" di Agent";
+
+     document.getElementById("welcomeBig").innerText = CLIENT.name + " di Agent";
+     sendBtn.style.background=CLIENT.primary_color;
+ } catch (err) {
+     console.error("Gagal load branding", err);
+ }
+}
+
+function showDashboard(){
+  localStorage.setItem("agent_last_menu", "dashboard");
+  setActiveMenu("menuDashboard");
+  document.getElementById("dashboardView").classList.remove("hidden");
+  document.getElementById("chatWrapper").classList.add("hidden");
+  renderDashboardStats();
+}
+
+function showMessage(){
+  localStorage.setItem("agent_last_menu", "message");
+  setActiveMenu("menuMessage");
+  document.getElementById("dashboardView").classList.add("hidden");
+  document.getElementById("chatWrapper").classList.remove("hidden");
+}
+
+// ================= STATISTIK FIX (SINKRON DENGAN DATABASE) =================
+function renderDashboardStats(){
+  // 🛡️ ANTI CRASH: Jika CLIENT belum selesai loading, stop di sini!
+  if(!CLIENT) return; 
+
+  let incoming = 0;
+  let outgoing = 0;
+  let resolvedCount = 0;
+  let activeUsers = 0;
+
+  // 1. Hitung Pesan Masuk & Keluar khusus agent ini
+  ALL_MESSAGES.forEach(m => {
+    if(m.assigned_to !== EMAIL) return;
+    if(m.direction === "incoming") incoming++;
+    if(m.direction === "outgoing") outgoing++;
+  });
+
+  // 2. 🔥 FIX: Hitung Active & Resolved langsung dari Map Database (Bukan LocalStorage lagi)
+  Object.values(processedChatMap).forEach(c => {
+     if(c.is_closed) {
+         resolvedCount++;
+     } else {
+         activeUsers++;
+     }
+  });
+
+  const total = incoming + outgoing;
+
+  const totalEl = document.getElementById("totalChat");
+  if(totalEl) totalEl.innerText = total;
+  
+  const incomingEl = document.getElementById("incomingChat");
+  if(incomingEl) incomingEl.innerText = incoming;
+  
+  const outgoingEl = document.getElementById("outgoingChat");
+  if(outgoingEl) outgoingEl.innerText = outgoing;
+  
+  const resolvedEl = document.getElementById("resolvedChat");
+  if(resolvedEl) resolvedEl.innerText = resolvedCount;
+
+  // 🔥 FIX CHART MENGHILANG & UPDATE
+  const dashboardView = document.getElementById("dashboardView");
+  if(dashboardView && !dashboardView.classList.contains("hidden")) {
+      const ctx = document.getElementById("chart");
+      if(ctx) {
+          const existingChart = Chart.getChart(ctx);
+          if (existingChart) existingChart.destroy();
+          
+          new Chart(ctx, {
+            type: 'bar',
+            data: {
+              labels: ['Incoming', 'Outgoing', 'Active Chat', 'Resolved'],
+              datasets: [{
+                label: 'Statistik Agent',
+                data: [incoming, outgoing, activeUsers, resolvedCount],
+                backgroundColor: [
+                  'rgba(16, 185, 129, 0.8)', 
+                  'rgba(245, 158, 11, 0.8)', 
+                  'rgba(59, 130, 246, 0.8)', 
+                  'rgba(107, 114, 128, 0.8)'  
+                ]
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false
+            }
+          });
+      }
+  }
+}
+  
+// ================= LOAD DATA (VERSI FINAL & STABIL) =================
+async function load(){
+  if(!CLIENT) return;
+
+  try {
+    const res = await fetch(API+"/messages",{headers:{"client-id":CID}});
+    const dataRaw = await res.json();
+    if(!Array.isArray(dataRaw)) return;
+    
+    // 🔥 PENTING: Urutkan dari ID terkecil ke terbesar 
+    // supaya pesan terbaru diproses terakhir dan menjadi status final di map
+    ALL_MESSAGES = dataRaw.sort((a, b) => a.id - b.id);
+    
+  } catch(e) {
+    console.error("Gagal load messages", e);
+    return;
+  }
+
+  // POPUP ASSIGN BARU 
+  if(LAST_ASSIGNED_IDS.length > 0){
+    const currentAssigned = ALL_MESSAGES.filter(m => m && m.assigned_to === EMAIL).map(m => m.id);
+    const newAssigned = currentAssigned.filter(id => !LAST_ASSIGNED_IDS.includes(id));
+    if(newAssigned.length > 0) showAssignPopup();
+    LAST_ASSIGNED_IDS = currentAssigned;
+  }
+
+  const map = {};
+
+  // 🔥 PERBAIKAN FATAL 1: Kumpulkan daftar user milik Agen ini dulu
+  // Biar pesan Chatbot/System (yang tidak ada tag assigned) tidak hilang!
+  const myUsers = new Set();
+  ALL_MESSAGES.forEach(m => {
+      if (m.assigned_to === EMAIL) {
+          const isOut = (m.sender === CLIENT.sender || m.sender === EMAIL || m.direction === "outgoing");
+          const user = isOut ? m.receiver : m.sender;
+          if (user) myUsers.add(user);
+      }
+  });
+
+  // 🔥 PERBAIKAN FATAL 2: Render Map List HANYA untuk myUsers (Bot & Flow ikut masuk!)
+  ALL_MESSAGES.forEach(m => {
+    const isOutgoing = (m.sender === CLIENT.sender || m.sender === EMAIL || m.direction === "outgoing");
+    const user = isOutgoing ? m.receiver : m.sender;
+    
+    // Skip chat milik agen lain (Hanya user yang ada di myUsers)
+    if(!user || !myUsers.has(user)) return; 
+
+    let safeName = m.name;
+    if(!safeName || safeName === "Unknown") {
+        safeName = "User " + user.slice(-4);
+    }
+
+    const dbClosedStatus = (m.is_closed == 1);
+    
+    // 🔥 PERBAIKAN FATAL 3: Bikin Teks Flow/Bot cantik di Sidebar (Kiri)
+    let displayMsg = m.message || (m.type && m.type !== 'text' ? `[${m.type.toUpperCase()}]` : '[Media]');
+    if (typeof displayMsg === "string") {
+        if (displayMsg.includes("[Flow Submit]")) {
+            displayMsg = "📋 Mengisi Form/Flow";
+        } else if (displayMsg.includes("[Button Click]")) {
+            displayMsg = "↩️ " + displayMsg.replace("[Button Click]", "").trim();
+        } else if (m.type === "template") {
+            displayMsg = "🤖 " + displayMsg; 
+        }
+    }
+
+    if(!map[user]){
+      map[user]={
+        number: user,
+        name: safeName,
+        last_message: displayMsg,
+        last_time: m.timestamp,
+        last_status: m.status,
+        is_last_out: isOutgoing, 
+        is_unread: (!isOutgoing), 
+        is_closed: dbClosedStatus 
+      };
+    } else {
+      // Update nama jika ada yang valid
+      if (m.name && m.name !== "Unknown" && !m.name.startsWith("User ")) {
+          map[user].name = m.name;
+      }
+      map[user].last_message = displayMsg;
+      map[user].last_time = m.timestamp;
+      map[user].last_status = m.status;
+      map[user].is_last_out = isOutgoing;
+      map[user].is_closed = dbClosedStatus; 
+      
+      // AUTO REOPEN & UNREAD SYNC
+      if (!isOutgoing) {
+          map[user].is_unread = true;
+          map[user].is_closed = false; 
+      } else {
+          map[user].is_unread = false;
+      }
+    }
+  });
+
+  processedChatMap = map;
+  renderChatListUI();
+  renderDashboardStats();
+
+  // Update tampilan chat yang sedang dibuka agar tombol Resolve/Reopen sinkron
+  if(selected && processedChatMap[selected]){
+    const current = processedChatMap[selected];
+    const btnResolve = document.getElementById("btnResolve");
+    const chatInputArea = document.getElementById("chatInputArea");
+    const resolvedBanner = document.getElementById("resolvedBanner");
+
+    if(current.is_closed){
+        if(btnResolve) {
+          btnResolve.innerHTML = "🔄 Reopen Chat";
+          btnResolve.classList.replace("text-green-600", "text-gray-500");
+        }
+        resolvedBanner?.classList.remove("hidden");
+        chatInputArea?.classList.add("hidden");
+        chatInputArea?.classList.remove("flex");
+    } else {
+        if(btnResolve) {
+          btnResolve.innerHTML = "✅ Resolve";
+          btnResolve.classList.replace("text-gray-500", "text-green-600");
+        }
+        resolvedBanner?.classList.add("hidden");
+        chatInputArea?.classList.remove("hidden");
+        chatInputArea?.classList.add("flex");
+    }
+
+    // FIX AUTO MUNCUL AGENT: Update chat history otomatis tanpa refresh
+    const filtered = ALL_MESSAGES.filter(m => m && (m.sender === selected || m.receiver === selected));
+    const currentIds = filtered.map(x => x.id + "-" + x.status).join("|");
+    
+    if (currentIds !== LAST_RENDER_IDS) {
+        LAST_RENDER_IDS = currentIds;
+        const chatBoxEl = document.getElementById("chatBox");
+        if (chatBoxEl) {
+            const html = filtered.map(m => renderBubble(m)).join('');
+            LAST_RENDER_HTML = html;
+            chatBoxEl.innerHTML = html;
+            setTimeout(() => {
+                if (!isUserScrollingUp) chatBoxEl.scrollTop = chatBoxEl.scrollHeight;
+            }, 100);
+        }
+    }
+  }
+
+  // Handle auto-open last chat jika diperlukan
+  const lastChat = JSON.parse(localStorage.getItem("agent_last_chat") || "null");
+  if(lastChat && !selected){
+    const found = map[lastChat.number];
+    if(found) openChat(found.number, found.name);
+    else localStorage.removeItem("agent_last_chat");
+  }
+}
+
+// ================= RENDER CHAT LIST (FIX MIRRORING & DATABASE SYNC) =================
+function renderChatListUI() {
+  const chatListEl = document.getElementById("chatList");
+  if (!chatListEl) return;
+
+  let list = Object.values(processedChatMap);
+
+  // 🔥 1. FITUR AUTO-REOPEN & SYNC
+  // Kita tidak perlu lagi memanipulasi localStorage di sini.
+  // Logika Auto-Reopen sudah ditangani di fungsi load() 
+  // (Jika ada is_unread dari database, maka is_closed otomatis dianggap false).
+
+  // 🔥 2. HITUNG BADGE RESOLVED DARI DATABASE
+  // Menghitung berapa banyak chat yang status is_closed-nya bernilai true
+  let resolvedCount = list.filter(c => c.is_closed).length;
+
+  const badge = document.getElementById("resolvedBadge");
+  if(badge){
+     if(resolvedCount > 0){
+        badge.innerText = resolvedCount;
+        badge.classList.remove("hidden");
+        // Tetap warna abu-abu sesuai permintaan kamu
+        badge.classList.remove("bg-red-500");
+        badge.classList.add("bg-gray-500"); 
+     } else {
+        badge.classList.add("hidden");
+     }
+  }
+
+  // 🔥 3. FILTERING TAB LIST BERDASARKAN DATABASE
+  list = list.filter(c => {
+      // Jika tab yang dipilih adalah 'resolved', tampilkan yang is_closed: true
+      if (activeChatFilter === 'resolved') return c.is_closed;
+      
+      // Jika tab 'all' atau 'unread', jangan tampilkan chat yang sudah ditutup (closed)
+      if (c.is_closed) return false; 
+      
+      if (activeChatFilter === 'unread') return c.is_unread;
+      return true;
+  });
+
+  // 4. FILTER SEARCH BAR (Fitur tetap jalan)
+  if (chatSearchQuery) {
+    list = list.filter(c => 
+      c.name.toLowerCase().includes(chatSearchQuery) || 
+      c.number.includes(chatSearchQuery)
+    );
+  }
+
+  // Urutkan berdasarkan waktu terbaru
+  list.sort((a, b) => new Date(b.last_time.replace(" ","T")) - new Date(a.last_time.replace(" ","T")));
+
+ // 5. Render ke HTML
+  chatListEl.innerHTML = list.map(c => {
+      const nameClass = c.is_unread ? "font-extrabold text-black dark:text-white" : "font-semibold text-gray-800 dark:text-gray-200";
+      const msgClass = c.is_unread ? "font-bold text-gray-800 dark:text-gray-300" : "font-normal text-gray-500 dark:text-gray-400";
+      
+      let safeMsg = c.last_message || 'File/Media';
+      safeMsg = String(safeMsg).replace(/<[^>]*>?/gm, '').replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+      // 🔥 LOGIKA ICON STATUS SINKRON
+      let listStatusIcon = "";
+      
+      // Hanya munculkan icon centang/silang jika pesan terakhir kita yang kirim (is_last_out)
+      if (c.is_last_out) {
+          if (c.last_status === "failed") {
+              listStatusIcon = `<span class="text-red-500 text-[11px]">❌</span>`;
+          } else if (c.last_status === "read") {
+              listStatusIcon = `<span class="text-[#53bdeb] text-[11px] font-bold">✓✓</span>`;
+          } else if (c.last_status === "delivered") {
+              listStatusIcon = `<span class="text-gray-400 text-[11px]">✓✓</span>`;
+          } else {
+              // Default untuk sent atau pending
+              listStatusIcon = `<span class="text-gray-400 text-[11px]">✓</span>`;
+          }
+      }
+
+      return `
+      <div onclick="openChat('${c.number}','${c.name}')" class="p-3 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition flex items-center gap-3">
+        <div class="relative flex-shrink-0">
+          <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(c.name)}&background=random&color=fff" class="w-11 h-11 rounded-full object-cover shadow-sm">
+          <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" class="w-4 h-4 absolute bottom-0 right-0 bg-white rounded-full border border-white">
+          ${c.is_unread ? '<div class="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white dark:border-gray-800"></div>' : ''}
+        </div>
+        <div class="flex-1 min-w-0 border-b border-gray-100 dark:border-gray-700 pb-2">
+           <div class="flex justify-between items-baseline mb-0.5">
+             <h3 class="${nameClass} text-[15px] truncate mr-2">${c.name}</h3>
+             <span class="text-[11px] ${c.is_unread ? 'text-green-500 font-bold' : 'text-gray-400'} whitespace-nowrap">${formatTimeShort(c.last_time)}</span>
+           </div>
+           <p class="${msgClass} text-[13px] truncate flex items-center gap-1">
+              ${listStatusIcon} ${safeMsg}
+           </p>
+        </div>
+      </div>
+  `}).join('');
+
+  if(list.length === 0) {
+      chatListEl.innerHTML = `<div class="p-6 text-center text-xs text-gray-400 italic">Tidak ada percakapan.</div>`;
+  }
+}
+
+// ================= OPEN CHAT (FIX HISTORY KOSONG) =================
+function openChat(num, name) {
+  if (!num) return;
+  selected = num;
+  localStorage.setItem("agent_last_chat", JSON.stringify({ number: num, name: name }));
+
+  const emptyState = document.getElementById("emptyState");
+  const chatContent = document.getElementById("chatContent");
+  if (emptyState) emptyState.classList.add("hidden");
+  if (chatContent) chatContent.classList.remove("hidden");
+
+  const chatNameEl = document.getElementById("chatName");
+  const chatNumberEl = document.getElementById("chatNumber");
+  const avatarEl = document.getElementById("avatar");
+
+  if (chatNameEl) chatNameEl.innerText = name || "User";
+  if (chatNumberEl) chatNumberEl.innerText = num;
+  if (avatarEl) avatarEl.src = "https://ui-avatars.com/api/?name=" + encodeURIComponent(name || "User") + "&background=random&color=fff";
+
+  const btnResolve = document.getElementById("btnResolve");
+  const chatInputArea = document.getElementById("chatInputArea");
+  const resolvedBanner = document.getElementById("resolvedBanner");
+  const resolvedArr = JSON.parse(localStorage.getItem('resolved_chats') || '[]');
+  const isResolved = processedChatMap[num]?.is_closed;
+
+  // UBAH TOMBOL & BANNER RESOLVE
+  if (isResolved) {
+    if(btnResolve) {
+        btnResolve.innerHTML = "🔄 Reopen Chat";
+        btnResolve.classList.replace("text-green-600", "text-gray-500");
+        btnResolve.classList.replace("border-green-200", "border-gray-200");
+    }
+    if (resolvedBanner) resolvedBanner.classList.remove("hidden");
+    if (chatInputArea) {
+      chatInputArea.classList.add("hidden");
+      chatInputArea.classList.remove("flex");
+    }
+  } else {
+    if(btnResolve) {
+        btnResolve.innerHTML = "✅ Resolve";
+        btnResolve.classList.replace("text-gray-500", "text-green-600");
+        btnResolve.classList.replace("border-gray-200", "border-green-200");
+    }
+    if (resolvedBanner) resolvedBanner.classList.add("hidden");
+    if (chatInputArea) {
+      chatInputArea.classList.remove("hidden");
+      chatInputArea.classList.add("flex");
+    }
+  }
+
+  try {
+    // 🔥 SUPER AMAN: Tarik semua riwayat obrolan dengan nomor ini tanpa filter aneh-aneh!
+    const html = ALL_MESSAGES
+      .filter(m => m && (m.sender === num || m.receiver === num))
+      .map(m => renderBubble(m))
+      .join('');
+
+    if (html !== LAST_RENDER_HTML) {
+      LAST_RENDER_HTML = html;
+      const chatBoxEl = document.getElementById("chatBox");
+      if (chatBoxEl) {
+        chatBoxEl.innerHTML = html;
+        setTimeout(() => {
+          if (!isUserScrollingUp) chatBoxEl.scrollTop = chatBoxEl.scrollHeight;
+        }, 100);
+      }
+    }
+  } catch (err) {
+    console.error("Error merender history chat:", err);
+  }
+
+  const msgEl = document.getElementById("msg");
+  const sendBtnEl = document.getElementById("sendBtn");
+  if (msgEl) msgEl.disabled = false;
+  if (sendBtnEl) {
+    sendBtnEl.disabled = false;
+    sendBtnEl.innerText = "Send";
+  }
+}
+
+// ================= BUBBLE CHAT =================
+function renderBubble(m){
+ if (!m) return "";
+ // Deteksi akurat apakah ini pesan masuk atau pesan keluar
+ const isOut = m.direction === "outgoing" || m.sender === EMAIL || (CLIENT && m.sender === CLIENT.sender);
+
+ return `
+ <div class="flex ${isOut ? 'justify-end' : 'justify-start'}">
+   <div class="max-w-xs px-3 py-2 rounded-lg shadow-sm break-words
+    ${isOut ? 'bg-emerald-100 dark:bg-emerald-900 text-gray-800 dark:text-white' : 'bg-gray-200 dark:bg-gray-700 text-black dark:text-white'}">
+
+     ${renderMessage(m)}
+
+     <div class="text-[10px] mt-1 flex justify-end gap-1 opacity-80">
+       ${formatTime(m.timestamp)}
+       ${isOut ? renderStatus(m.status, m.meta) : ""}
+     </div>
+
+   </div>
+ </div>`;
+}
+
+// ================= WAKTU (ANTI CRASH) =================
+function formatTime(t){
+  // 🛡️ Jika timestamp dari database kosong/rusak, jangan paksakan (ini penyebab crashnya)
+  if (!t) return ""; 
+  try {
+    return new Date(String(t).replace(" ", "T")).toLocaleString("id-ID", {
+      timeZone: "Asia/Jakarta"
+    });
+  } catch (e) {
+    return "";
+  }
+}
+
+//RENDER MESSAGE
+function renderMessage(m){
+  let caption = m.message ? `<div class="text-xs mt-1 whitespace-pre-line">${m.message}</div>` : "";
+  function fixUrl(path){
+    if(!path) return "";
+    if(path.startsWith("http")) return path;
+    path = path.replace(/^\/media\//, "").replace(/^media\//, "");
+    return MEDIA_BASE + path;
+  }
+
+  // ================= 1. BLOK TEMPLATE =================
+  // 🔥 FIX: Hanya deteksi "template", JANGAN masukkan "interactive" di sini
+  if (m.type === "template") {
+    let parsed = {};
+    try { parsed = JSON.parse(m.parsed_template || "{}"); } catch(e){}
+
+    let tName = m.message;
+    let raw = {};
+    try { raw = JSON.parse(m.raw_payload || "{}"); } catch(e){}
+    if (!tName) tName = raw?.template?.name;
+
+    const realTpl = allTemplates.find(t =>
+        String(t.name).toLowerCase().trim() === String(tName).toLowerCase().trim()
+    );
+
+    if (realTpl) {
+       let paramsArr = [];
+       const bodyComp = raw?.template?.components?.find(c => c.type === "body");
+       if (bodyComp && bodyComp.parameters) {
+           paramsArr = bodyComp.parameters.map(p => p.text || p.payload || "");
+       } else if (parsed.body && Array.isArray(parsed.body)) {
+           paramsArr = parsed.body;
+       }
+
+       let stitchedBody = realTpl.body_text || realTpl.body || "";
+       paramsArr.forEach((val, i) => {
+           stitchedBody = stitchedBody.split(`{{${i+1}}}`).join(val);
+       });
+
+       parsed.header = realTpl.header_type ? { type: realTpl.header_type, value: realTpl.header_value } : null;
+       parsed.body = [stitchedBody];
+       parsed.footer = realTpl.footer || "";
+
+       let dbBtns = [];
+       try { dbBtns = JSON.parse(realTpl.buttons_json || realTpl.buttons || "[]"); } catch(e){}
+       parsed.buttons = dbBtns.map(b => {
+           if(b.type === "quick_reply") return { type: "quick_reply", value: b.text || b.value };
+           if(b.type === "url") return { type: "url", value: b.value || b.text };
+           if(b.type === "phone") return { type: "phone", value: b.value || b.text };
+           if(b.type === "flow") return { type: "flow", value: b.text || b.value };
+           return null;
+       }).filter(Boolean);
+
+    } else if (!parsed || Object.keys(parsed).length === 0) {
+       const components = raw?.template?.components || [];
+       const headerComp = components.find(c => c.type === "header");
+       const bodyComp   = components.find(c => c.type === "body");
+       const footerComp = components.find(c => c.type === "footer");
+       const buttonComps = components.filter(c => c.type === "button");
+       
+       let buttonsData = [];
+       if (raw?.interactive?.action?.buttons) {
+           buttonsData = raw.interactive.action.buttons.map(b => ({ type: "quick_reply", value: b.reply.title }));
+       } else if (raw?.interactive?.action?.sections) {
+           buttonsData = [{ type: "quick_reply", value: raw.interactive.action.button || "Menu" }];
+       } else if (buttonComps.length > 0) {
+           buttonsData = buttonComps.flatMap(comp => {
+               if(comp.parameters){
+                 return comp.parameters.map(p => {
+                   if(p.type === "payload" || p.type === "text") return { type: "quick_reply", value: p.payload || p.text };
+                   if(p.type === "url") return { type: "url", value: p.url };
+                   if(p.type === "phone_number") return { type: "phone", value: p.phone_number };
+                   return null;
+                 }).filter(Boolean);
+               }
+               return [];
+           });
+       }
+
+       parsed = {
+         header: headerComp ? {
+             type: headerComp.parameters?.[0]?.image ? "image" : headerComp.parameters?.[0]?.video ? "video" : headerComp.parameters?.[0]?.document ? "document" : "text",
+             value: headerComp.parameters?.[0]?.image?.link || headerComp.parameters?.[0]?.video?.link || headerComp.parameters?.[0]?.document?.link || headerComp.parameters?.[0]?.text || ""
+         } : (raw?.interactive?.header ? {type: raw.interactive.header.type, value: raw.interactive.header[raw.interactive.header.type]?.link || ""} : null),
+         body: bodyComp?.parameters ? bodyComp.parameters.map(p => p.text || p.payload).filter(Boolean) : [raw?.interactive?.body?.text || m.message],
+         footer: footerComp?.text || raw?.interactive?.footer?.text || "",
+         buttons: buttonsData
+       };
+    }
+
+    const header = parsed.header;
+    const body = parsed.body || [];
+    const footer = parsed.footer || "";
+    const buttons = parsed.buttons || [];
+
+    let headerHTML = "";
+    let bodyHTML = "";
+    let footerHTML = "";
+    let buttonsHTML = "";
+
+    if(header){
+      if(header.type === "text") headerHTML = `<div class="font-semibold mb-1">${header.value}</div>`;
+      if(header.type === "image") headerHTML = `<img src="${header.value}" class="rounded mb-1 max-h-40 w-full object-cover cursor-pointer hover:opacity-80" onclick="openImage('${header.value}')">`;
+      if(header.type === "video") headerHTML = `<video src="${header.value}" class="rounded mb-1 max-h-32 w-full object-cover" controls></video>`;
+      if(header.type === "document") headerHTML = `<a href="${header.value}" target="_blank" class="block bg-gray-700 p-2 rounded mb-1 text-xs text-blue-400 underline hover:opacity-80">📄 Open Document</a>`;
+    }
+
+    if(body.length) bodyHTML = body.join(" ");
+    else bodyHTML = m.message; 
+
+    if(footer) footerHTML = `<div class="text-[10px] text-gray-400 mt-1">${footer}</div>`;
+
+    buttons.forEach(b => {
+      if(b.type === "quick_reply") buttonsHTML += `<span class="inline-block bg-gray-600 px-2 py-1 rounded text-[11px] mt-1 mr-1 shadow-sm text-white border border-gray-500">↩️ ${b.value}</span>`;
+      if(b.type === "url") buttonsHTML += `<a href="${b.value}" target="_blank" class="block mt-1 text-xs text-blue-400 underline">🔗 Open Link</a>`;
+      if(b.type === "phone") buttonsHTML += `<div class="text-xs text-green-400 mt-1">📞 ${b.value}</div>`;
+      if(b.type === "flow") buttonsHTML += `<div class="text-xs text-purple-400 mt-1">📋 ${b.value}</div>`;
+    });
+
+    return `
+      <div class="bg-[#202c33] text-white p-2.5 rounded-lg shadow-md w-full max-w-xs">
+        ${headerHTML}
+        <div class="text-[13px] whitespace-pre-line leading-relaxed">${bodyHTML}</div>
+        ${footerHTML}
+        ${buttonsHTML ? `<div class="mt-2 flex flex-wrap border-t border-gray-600/50 pt-1.5">${buttonsHTML}</div>` : ''}
+      </div>
+    `;
+  }
+
+  // ================= 2. BLOK MEDIA =================
+  if(m.type === "image" || m.type === "sticker"){
+    const url = fixUrl(m.media_url);
+    return `<img src="${url}" loading="lazy" onclick="openImage('${url}')" class="rounded max-h-40 cursor-pointer hover:opacity-80 transition">${caption}`;
+  }
+
+  if(m.type === "video"){
+    return `<video src="${fixUrl(m.media_url)}" controls preload="metadata" playsinline class="max-h-40 rounded"></video>${caption}`;
+  }
+
+  if(m.type === "audio"){
+    return `<audio controls src="${fixUrl(m.media_url)}"></audio>${caption}`;
+  }
+
+  if(m.type === "document"){
+    const fileName = m.file_name || "file";
+    return `<a href="${fixUrl(m.media_url)}" target="_blank" class="flex items-center gap-2 text-blue-500 underline"><span>${getFileIcon(fileName)}</span><span class="truncate max-w-[150px]">${fileName}</span></a>${caption}`;
+  }
+
+  // ================= 3. BLOK INTERACTIVE CLICK (Flow / Button) =================
+  if (m.message && typeof m.message === "string") {
+    if (m.message.includes("[Flow Submit]")) {
+       try {
+         const jsonString = m.message.replace("[Flow Submit]", "").trim();
+         const flowData = JSON.parse(jsonString);
+         
+         let flowHTML = `<div class="text-[13px] leading-relaxed">`;
+         let tokenHTML = "";
+         
+         for (let key in flowData) {
+           if (key === "flow_token") {
+             tokenHTML = `<div class="mt-1.5 pt-1 border-t border-gray-300/50 dark:border-gray-600/50 text-[11px] text-gray-500 font-mono">
+                            <span class="font-bold text-gray-400">Token ID:</span> ${flowData[key]}
+                          </div>`;
+           } else {
+             flowHTML += `<div><span class="font-bold">${key}:</span> ${flowData[key]}</div>`;
+           }
+         }
+         flowHTML += tokenHTML + `</div>`;
+         return flowHTML;
+       } catch(e) {}
+    }
+
+    if (m.message.includes("[Button Click]")) {
+       const btnText = m.message.replace("[Button Click]", "").trim();
+       return `<div class="text-[13px] font-semibold text-blue-600 dark:text-blue-400 flex items-center gap-1">↩️ ${btnText}</div>`;
+    }
+  }
+
+  // ================= 4. BLOK TEXT DEFAULT =================
+  return m.message ? `<div class="whitespace-pre-line">${m.message}</div>` : "";
+}
+
+function getFileIcon(name){
+  const ext = name?.split(".").pop()?.toLowerCase();
+  if(ext === "pdf") return "📕";
+  if(ext === "xls" || ext === "xlsx") return "📊";
+  if(ext === "doc" || ext === "docx") return "📄";
+  if(ext === "zip") return "🗜️";
+  if(ext === "ppt" || ext === "pptx") return "📈";
+  if(ext === "csv") return "📑";
+  if(ext === "txt") return "📃";
+  return "📁";
+}
+  
+// 🔥 RENDER STATUS CENTANG (Versi Agent - Anti Gagal)
+function renderStatus(s, metaData) {
+  let label = s;
+
+  if (s === "failed") {
+    label = "Failed"; // Fallback default
+
+    if (metaData) {
+      try {
+        // Bongkar JSON jika metaData berupa string
+        const meta = typeof metaData === "string" ? JSON.parse(metaData) : metaData;
+        
+        // Ambil pesan error dari berbagai kemungkinan field Aptana/Meta
+        const errorMsg = meta?.notes || 
+                         (meta?.sourceReason && meta?.sourceReason[0]?.message) || 
+                         meta?.reason || 
+                         meta?.error?.message;
+        
+        if (errorMsg) {
+           label = `Failed: ${errorMsg}`;
+        }
+      } catch(e) {
+        // Jika gagal parse, biarkan label tetap "Failed"
+      }
+    }
+  }
+
+  // Escape karakter agar tooltip (title) tidak rusak
+  const safeLabel = String(label)
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+
+  if (s === "sent") 
+    return `<span title="${safeLabel}" class="text-gray-400 text-xs cursor-default">✓</span>`;
+  if (s === "delivered") 
+    return `<span title="${safeLabel}" class="text-gray-400 text-xs cursor-default">✓✓</span>`;
+  if (s === "read") 
+    return `<span title="${safeLabel}" class="text-sky-400 font-bold text-xs cursor-default">✓✓</span>`;
+  if (s === "failed") 
+    // Tambahkan cursor-help agar Agent tahu bisa di-hover
+    return `<span title="${safeLabel}" class="text-red-500 text-xs cursor-help">❌</span>`;
+  
+  return "";
+}
+
+// SEND
+async function send(){
+ if(!selected) return alert("Pilih chat");
+ if(!msg.value && !fileData) return alert("Isi pesan atau pilih file dulu");
+
+ isSending = true;
+ sendBtn.innerHTML = "⏳ Uploading...";
+ sendBtn.disabled = true;
+ let finalMediaUrl = null;
+
+ try {
+   if(fileData){
+     const f = document.getElementById("file").files[0];
+     const fd = new FormData();
+     fd.append("file", f);
+     const uploadRes = await fetch(API + "/upload",{ method:"POST", body: fd });
+     const upload = await uploadRes.json();
+     if(!uploadRes.ok || !upload.url) throw new Error("Upload gagal");
+     finalMediaUrl = upload.url;
+   }
+
+   sendBtn.innerHTML = `<span class="animate-pulse">⏳ Sending...</span>`;
+
+   const token = localStorage.getItem("bearer_token") || "";
+   await fetch(API+"/send-message",{
+     method:"POST",
+     headers:{
+       "Content-Type":"application/json",
+       "Authorization": "Bearer " + token
+     },
+     body:JSON.stringify({
+       receiver:selected,
+       message: msg.value,
+       type: fileType || "text",
+       media_url: finalMediaUrl, 
+       fileName: fileName,       
+       client_id:CID,
+       agent_email: EMAIL,
+       assigned_to: EMAIL
+     })
+   });
+ } catch(err){
+   console.log("SEND ERROR:", err);
+ }
+
+ isSending = false;
+ sendBtn.innerHTML = "Send";
+ sendBtn.disabled = false;
+ filePreview = null;
+ document.getElementById("filePreviewBox").innerHTML = "";
+ msg.value="";
+ fileData=null;
+ fileType=null;
+ fileName=null;
+ document.getElementById("file").value = "";
+ load();
+}
+
+function uploadFile(){
+  const f = document.getElementById("file").files[0];
+  if(!f) return;
+  fileMime = f.type;
+  fileName = f.name;
+  const reader = new FileReader();
+  reader.onload = e => {
+    fileData = e.target.result; 
+    filePreview = URL.createObjectURL(f);
+    if(f.type.includes("image")) fileType = "image";
+    else if(f.type.includes("video")) fileType = "video";
+    else if(f.type.includes("audio")) fileType = "audio";
+    else fileType = "document";
+    showFilePreview();
+  };
+  reader.readAsDataURL(f);
+}
+  
+function showFilePreview(){
+  let html = "";
+  if(fileType === "image" || fileType === "video"){
+    html = `<div class="relative inline-block">
+        <${fileType==="image"?'img':'video controls'} src="${filePreview}" class="h-32 rounded">
+        <button onclick="cancelFile()" class="absolute top-1 right-1 bg-black/60 text-white rounded-full px-2">✕</button>
+      </div>`;
+  } else {
+    html = `<div class="relative p-3 bg-gray-200 dark:bg-gray-700 rounded flex items-center gap-2">
+      📄 <span class="truncate max-w-[150px]">${fileName}</span>
+      <button onclick="cancelFile()" class="ml-auto bg-black/60 text-white rounded px-2">✕</button>
+    </div>`;
+  }
+  document.getElementById("filePreviewBox").innerHTML = html;
+}
+
+function cancelFile(){
+  fileData = null;
+  fileType = null;
+  fileName = null;
+  filePreview = null;
+  fileMime = null;
+  document.getElementById("filePreviewBox").innerHTML = "";
+  document.getElementById("file").value = "";
+}
+
+function handleKey(e){
+  if(e.key === "Enter"){
+    e.preventDefault();
+    if(!e.shiftKey) send();
+    else {
+      const input = document.getElementById("msg");
+      const start = input.selectionStart;
+      const end = input.selectionEnd;
+      input.value = input.value.substring(0, start) + "\n" + input.value.substring(end);
+      input.selectionStart = input.selectionEnd = start + 1;
+    }
+  }
+}
+
+function setupEmoji(){
+  const picker = document.querySelector("emoji-picker");
+  const input = document.getElementById("msg");
+  if(!picker || !input) return;
+  picker.addEventListener("emoji-click", e=>{
+    input.value += e.detail.unicode;
+    input.focus();
+  });
+}
+
+function logout(){
+ localStorage.clear();
+ location="login.html";
+}
+
+function showAssignPopup(){
+  const div = document.createElement("div");
+  // 🛡️ ANTI CRASH untuk CLIENT.name
+  const brandName = CLIENT ? CLIENT.name : "Sistem";
+  div.innerHTML = `<div class="fixed top-5 right-5 bg-green-500 text-white px-4 py-3 rounded shadow-lg z-50">📩 Anda menerima assign chat baru dari ${brandName}</div>`;
+  document.body.appendChild(div);
+  setTimeout(()=>div.remove(),3000);
+}
+
+function toggleEmoji(){
+  document.getElementById("emojiBox").classList.toggle("hidden");
+}
+
+window.addEventListener("click", function(e){
+  const box = document.getElementById("emojiBox");
+  if(!e.target.closest("#emojiBox") && !e.target.closest("button[onclick='toggleEmoji()']")){
+    if(box) box.classList.add("hidden");
+  }
+});
+  
+function openImage(src){
+  document.getElementById("imgPreview").src = src;
+  document.getElementById("imgModal").classList.remove("hidden");
+}
+
+function closeImage(){
+  document.getElementById("imgModal").classList.add("hidden");
+}
+  
+init();
+</script>
+
+
+<div id="imgModal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+  <button onclick="closeImage()" class="absolute top-5 right-5 text-white text-3xl font-bold hover:scale-110 transition">✕</button>
+  <img id="imgPreview" class="max-h-[90%] max-w-[90%] rounded shadow">
+</div>
+
+</body>
+</html>

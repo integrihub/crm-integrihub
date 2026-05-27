@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <title>Account Settings - IntegriHub</title>
+  <link rel="icon" href="https://cdn.phototourl.com/free/2026-04-17-34afdbc3-383e-4a83-bee6-d9afb83d3bb6.png">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { darkMode: 'class' }
+  </script>
+  <script>
+    (function(){
+      const theme = localStorage.getItem("theme") || "system";
+      if(theme === "dark") document.documentElement.classList.add("dark");
+      else if(theme === "light") document.documentElement.classList.remove("dark");
+      else if(window.matchMedia('(prefers-color-scheme: dark)').matches) document.documentElement.classList.add("dark");
+    })();
+  </script>
+  <style>
+    .custom-scroll::-webkit-scrollbar { height: 8px; width: 8px; }
+    .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    .dark .custom-scroll::-webkit-scrollbar-thumb { background: #475569; }
+  </style>
+</head>
+
+<body class="bg-gray-100 dark:bg-gray-900 text-black dark:text-white" onload="init('account')">
+
+<div class="fixed top-0 left-0 w-full z-50 flex justify-between items-center p-3 bg-white dark:bg-gray-800 shadow border-b dark:border-gray-700">
+  <div class="flex items-center gap-2">
+    <img id="logo" class="h-8 rounded" alt="Logo">
+    <div>
+      <div id="clientName" class="font-bold"></div>
+      <div class="text-xs text-gray-500 dark:text-gray-400">Admin</div>
+    </div>
+  </div>
+
+  <div class="relative">
+    <div onclick="toggleProfile()" class="flex items-center gap-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-1.5 rounded-lg transition">
+      <div id="avatarCircle" class="w-8 h-8 rounded-full bg-yellow-400 flex items-center justify-center text-white font-bold shadow-sm"></div>
+      <div class="text-sm hidden sm:block">
+        <div id="profileName" class="font-semibold text-gray-800 dark:text-gray-200"></div>
+        <div id="profileEmail" class="text-gray-400 text-xs"></div>
+      </div>
+    </div>
+
+    <div id="profileMenu" class="hidden absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg shadow-xl p-2 z-50">
+      <p class="text-xs text-gray-400 mb-1 font-semibold px-2">Mode Tampilan</p>
+      <button onclick="setTheme('light')" class="block w-full text-left px-2 py-1.5 text-sm rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition">☀️ Light</button>
+      <button onclick="setTheme('dark')" class="block w-full text-left px-2 py-1.5 text-sm rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition">🌙 Dark</button>
+      <button onclick="setTheme('system')" class="block w-full text-left px-2 py-1.5 text-sm rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition">💻 System</button>
+      <hr class="my-2 border-gray-200 dark:border-gray-700">
+      <button onclick="logout()" class="text-red-500 text-sm font-bold w-full text-left px-2 py-1.5 rounded hover:bg-red-50 dark:hover:bg-red-900/30 transition">🚪 Logout</button>
+    </div>
+  </div>
+</div>
+
+<div class="flex">
+  <div class="w-64 bg-white dark:bg-gray-800 shadow border-r dark:border-gray-700 p-4 fixed top-[60px] left-0 h-[calc(100vh-60px)] overflow-y-auto z-40 flex flex-col justify-between custom-scroll">
+    <div>
+      <button onclick="location.href='dashboard.html'" class="menu-btn flex items-center w-full text-left px-4 py-2.5 rounded-lg mb-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition font-medium"><svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>Dashboard</button>
+      <button onclick="location.href='message.html'" class="menu-btn flex items-center w-full text-left px-4 py-2.5 rounded-lg mb-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition font-medium"><svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>Message</button>
+      <button onclick="location.href='template.html'" class="menu-btn flex items-center w-full text-left px-4 py-2.5 rounded-lg mb-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition font-medium"><svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"></path></svg>Template</button>
+      <button onclick="location.href='campaign.html'" class="menu-btn flex items-center w-full text-left px-4 py-2.5 rounded-lg mb-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition font-medium"><svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"></path></svg>Campaign</button>
+      <button onclick="location.href='report.html'" class="menu-btn flex items-center w-full text-left px-4 py-2.5 rounded-lg mb-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition font-medium"><svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>Report</button>
+      <button id="menuChatbot" onclick="location.href='settings.html'" class="menu-btn flex items-center w-full text-left px-4 py-2.5 rounded-lg mb-2 bg-transparent text-gray-600 dark:text-gray-300 hover:text-blue-600 hover:bg-transparent dark:hover:text-blue-400 dark:hover:bg-transparent transition duration-200 ease-in-out font-medium">
+        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="4" y="8" width="16" height="12" rx="2" ry="2"></rect><path d="M2 14h2"></path><path d="M20 14h2"></path><path d="M15 13v2"></path><path d="M9 13v2"></path><path d="M12 8V4"></path><path d="M12 4m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"></path>
+        </svg>
+        Chatbot Settings
+      </button>
+
+      <button id="menuAccount" onclick="location.href='account.html'" class="menu-btn flex items-center w-full text-left px-4 py-2.5 rounded-lg mb-2 bg-green-500 text-white dark:bg-blue-900/30 dark:text-blue-400 font-bold transition">
+        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+        Account & Webhooks
+      </button>
+    </div>
+    <div>
+      <button onclick="logout()" class="w-full flex items-center justify-center bg-red-50 text-red-600 border border-red-200 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400 py-2 rounded-lg mt-4 font-bold hover:bg-red-100 dark:hover:bg-red-900/50 transition">
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+        Logout
+      </button>
+      <div class="text-center mt-4 text-[10px] text-gray-400">2026 © IntegriHub v1.0.0</div>
+    </div>
+  </div>
+
+  <div class="flex-1 ml-64 mt-[60px] h-[calc(100vh-60px)] p-6 overflow-y-auto custom-scroll bg-gray-50 dark:bg-gray-900">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center border-b pb-4 mb-6 dark:border-gray-700">
+      <div>
+        <h1 class="text-2xl font-black text-gray-900 dark:text-white">Account & Webhooks</h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Kelola profil bisnis, integrasi API, dan endpoint URL callback.</p>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+      
+      <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 space-y-4">
+        <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">🏢 Informasi Bisnis</h2>
+        <hr class="dark:border-gray-700" />
+        <div class="space-y-3">
+          <div>
+            <label class="text-xs text-gray-400 font-bold uppercase">Nama Akun</label>
+            <div id="set_accName" class="text-sm font-semibold text-gray-800 dark:text-gray-200 p-2.5 bg-gray-50 dark:bg-gray-900 rounded-xl border dark:border-gray-700">Memuat...</div>
+          </div>
+          <div>
+            <label class="text-xs text-gray-400 font-bold uppercase">Email Terdaftar</label>
+            <div id="set_accEmail" class="text-sm font-semibold text-gray-800 dark:text-gray-200 p-2.5 bg-gray-50 dark:bg-gray-900 rounded-xl border dark:border-gray-700">Memuat...</div>
+          </div>
+          <div>
+            <label class="text-xs text-gray-400 font-bold uppercase">Nomor Bisnis (Sender WA)</label>
+            <div id="set_accSender" class="text-sm font-semibold text-emerald-600 dark:text-emerald-400 font-mono p-2.5 bg-gray-50 dark:bg-gray-900 rounded-xl border dark:border-gray-700">Memuat...</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 space-y-4">
+        <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">🔑 API Integration</h2>
+        <hr class="dark:border-gray-700" />
+        <div class="space-y-3">
+          <div>
+            <label class="text-xs text-gray-400 font-bold uppercase">Bearer Token</label>
+            <div class="relative mt-1">
+              <input id="set_accToken" type="password" readonly class="w-full text-sm font-mono text-gray-800 dark:text-gray-200 p-2.5 pr-10 bg-gray-50 dark:bg-gray-900 rounded-xl border dark:border-gray-700 outline-none" value="" />
+              <button onclick="set_toggleToken()" class="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">👁️</button>
+            </div>
+          </div>
+          <button onclick="set_copyToken()" class="w-full py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 font-semibold rounded-xl text-sm transition flex items-center justify-center gap-2">
+            📋 Salin Token API
+          </button>
+          <p class="text-[11px] text-gray-400 leading-relaxed italic">Gunakan token ini pada header <code>Authorization: Bearer [token]</code> saat melakukan request API dari server vendor/eksternal.</p>
+
+          <div class="pt-2">
+            <label class="text-xs text-gray-400 font-bold uppercase">Client ID</label>
+            <div class="relative mt-1 flex items-center gap-2">
+              <input id="set_clientId" type="text" readonly class="w-full text-sm font-mono text-gray-500 dark:text-gray-400 p-2.5 bg-gray-100 dark:bg-gray-900/50 rounded-xl border border-gray-200 dark:border-gray-700 outline-none cursor-not-allowed" value="" />
+              <button onclick="set_copyClientId()" class="p-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-xl transition tooltip" title="Salin Client ID">
+                📋
+              </button>
+            </div>
+          </div>
+        
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 space-y-4 xl:col-span-1">
+        <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">🔗 Whitelist Webhook URL</h2>
+        <hr class="dark:border-gray-700" />
+        <div class="space-y-3">
+          <p class="text-xs text-gray-400 leading-relaxed">Sistem akan mem-forward data pesan masuk dan status kirim (Sent, Read, Failed) ke URL yang terdaftar di bawah ini secara real-time.</p>
+          
+          <div id="set_webhookBox" class="space-y-2 max-h-[220px] overflow-y-auto pr-1 custom-scroll">
+            </div>
+
+          <button onclick="set_addWebhookRow()" class="w-full py-2 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 text-blue-600 dark:text-blue-400 font-bold rounded-xl text-xs transition border border-dashed border-blue-300 dark:border-blue-800 flex items-center justify-center gap-1">
+            ➕ Tambah URL Callback
+          </button>
+
+          <div class="mt-4 p-3 bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 rounded-xl space-y-2">
+            <label class="text-xs text-blue-600 dark:text-blue-400 font-bold flex items-center gap-1">
+              🔐 Webhook Secret (Opsional)
+            </label>
+            <p class="text-[10px] text-gray-500 dark:text-gray-400 leading-tight">Gunakan secret key ini untuk memvalidasi header <code class="text-xs text-gray-700 dark:text-gray-300">X-Webhook-Signature</code> di sisi server Anda.</p>
+            <div class="flex gap-2">
+              <input id="set_webhookSecret" type="text" placeholder="Kosongkan jika tidak butuh..." class="w-full text-xs font-mono text-gray-800 dark:text-gray-200 p-2 bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-600 outline-none focus:border-blue-500" value="" />
+              <button onclick="set_generateSecret()" class="px-3 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-white rounded-lg text-xs font-bold transition whitespace-nowrap">
+                ⚡ Generate
+              </button>
+            </div>
+          </div>
+          
+          <div class="pt-2">
+            <button id="set_btnSaveWebhooks" onclick="set_saveWebhooks()" class="w-full py-2.5 bg-green-500 hover:bg-green-600 text-white font-bold rounded-xl text-sm shadow-md transition">
+              💾 Simpan Konfigurasi
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div id="set_alertModal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-[9999] opacity-0 transition-opacity duration-300">
+  <div class="bg-white dark:bg-gray-800 w-[350px] p-6 rounded-2xl shadow-2xl transform scale-95 transition-transform duration-300">
+    <div id="set_alertIcon" class="flex items-center justify-center w-12 h-12 mx-auto mb-4 rounded-full"></div>
+    <h3 id="set_alertTitle" class="text-xl font-bold text-center text-gray-900 dark:text-white mb-2">Title</h3>
+    <p id="set_alertText" class="text-sm text-center text-gray-500 dark:text-gray-400 mb-6">Text</p>
+    <button onclick="set_closeAlert()" id="set_alertBtn" class="w-full px-4 py-2 text-white font-semibold rounded-xl shadow-md transition">Tutup</button>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script src="account.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Audit Trail Logs</title>
+  <link rel="icon" href="https://cdn.phototourl.com/free/2026-04-17-34afdbc3-383e-4a83-bee6-d9afb83d3bb6.png">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { darkMode: 'class' }
+  </script>
+</head>
+
+<body class="bg-gray-100 dark:bg-gray-900 transition-colors duration-300">
+
+<div class="flex flex-col md:flex-row min-h-screen">
+
+  <div class="w-full md:w-64 bg-white dark:bg-gray-800 p-4 shadow-md">
+    <h2 class="text-xl font-bold dark:text-white mb-4">Super Admin</h2>
+
+    <ul class="space-y-2 text-gray-700 dark:text-gray-200">
+      <li><button onclick="location.href='home.html'" class="w-full text-left p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700">Home</button></li>
+      <li><button onclick="location.href='create-client.html'" class="w-full text-left p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700">Create Client</button></li>
+      <li><button onclick="location.href='list-client.html'" class="w-full text-left p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700">List Client</button></li>
+      <li><button onclick="location.href='template.html'" class="w-full text-left p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700">Template Management</button></li>
+      <li><button class="w-full text-left p-2 rounded bg-gray-200 dark:bg-gray-700 font-semibold">Audit Trail Logs</button></li>
+    </ul>
+  </div>
+
+  <div class="flex-1 p-4 md:p-6 overflow-hidden">
+
+    <div class="flex justify-between items-center mb-6">
+      <h1 class="text-xl font-semibold dark:text-white">📜 Audit Trail Logs</h1>
+
+      <div class="relative">
+        <button onclick="toggleProfileMenu()" class="flex items-center gap-2 bg-white dark:bg-gray-800 px-3 py-2 rounded shadow">
+          <div class="w-8 h-8 bg-blue-500 text-white flex items-center justify-center rounded-full">
+            <span id="profileInitial">A</span>
+          </div>
+          <span id="profileEmail" class="text-sm dark:text-white"></span>
+        </button>
+
+        <div id="profileMenu" class="hidden absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded shadow p-2 space-y-2 z-50">
+          <p class="text-xs text-gray-400 px-2">Theme</p>
+          <button onclick="setTheme('light')" class="w-full text-left px-2 py-1 rounded text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">☀️ Light</button>
+          <button onclick="setTheme('dark')" class="w-full text-left px-2 py-1 rounded text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">🌙 Dark</button>
+          <button onclick="setTheme('system')" class="w-full text-left px-2 py-1 rounded text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">💻 System</button>
+          <hr class="my-1 border-gray-200 dark:border-gray-700">
+          <button onclick="logout()" class="w-full text-left px-2 py-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900 rounded">Logout</button>
+        </div>
+      </div>
+    </div>
+
+   <div class="flex flex-wrap gap-2 mb-4 items-end bg-white dark:bg-gray-800 p-4 rounded shadow">
+      <div class="flex-1 min-w-[150px]">
+        <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Client ID</label>
+        <input type="text" id="filterClient" placeholder="Semua Client..." class="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+
+      <div class="flex-1 min-w-[120px]">
+        <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Action</label>
+        <select id="filterAction" class="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <option value="all">All Action</option>
+          <option value="CREATE">CREATE</option>
+          <option value="UPDATE">UPDATE</option>
+          <option value="DELETE">DELETE</option>
+          <option value="LOGIN">LOGIN</option>
+        </select>
+      </div>
+
+      <div class="flex-1 min-w-[120px]">
+        <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Modul</label>
+        <select id="filterEntity" class="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <option value="all">All Modul</option>
+          <option value="MESSAGE">MESSAGE</option>
+          <option value="TEMPLATE">TEMPLATE</option>
+          <option value="CAMPAIGN">CAMPAIGN</option>
+          <option value="CLIENT">CLIENT</option>
+          <option value="USER">USER</option>
+          <option value="CHATBOT">CHATBOT</option>
+        </select>
+      </div>
+
+      <div class="flex-1 min-w-[130px]">
+        <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Dari Tanggal</label>
+        <input type="date" id="filterStartDate" class="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+      <div class="flex-1 min-w-[130px]">
+        <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Sampai Tanggal</label>
+        <input type="date" id="filterEndDate" class="w-full border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <div id="dateWarning" class="hidden text-red-500 text-[10px] mt-1">⚠️ Pilih tanggal Dari & Sampai!</div>
+      </div>
+
+      <div class="flex gap-2 mt-2 md:mt-0">
+        <button onclick="applyFilter()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow transition">🔍 Filter</button>
+        <button id="btnExport" onclick="exportCSV()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow transition hidden md:block">📥 Export CSV</button>
+      </div>
+    </div>
+
+    <div class="overflow-x-auto bg-white dark:bg-gray-800 shadow rounded">
+      <table class="w-full text-left text-sm whitespace-nowrap">
+        <thead class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200">
+          <tr>
+            <th class="p-3">Time (WIB)</th>
+            <th class="p-3">Actor</th>
+            <th class="p-3">Client ID</th>
+            <th class="p-3">Action</th>
+            <th class="p-3">Entity</th>
+            <th class="p-3 text-center">Detail</th>
+          </tr>
+        </thead>
+        <tbody id="auditTableBody" class="divide-y divide-gray-200 dark:divide-gray-700 text-gray-700 dark:text-gray-300">
+          <tr><td colspan="6" class="p-4 text-center">Loading data...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="flex justify-between items-center mt-4">
+      <div class="flex items-center gap-3">
+        <select id="limitSelect" onchange="changeLimit(this.value)" class="border dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 rounded">
+          <option value="10">10</option>
+          <option value="20" selected>20</option>
+          <option value="50">50</option>
+        </select>
+        <span id="auditInfo" class="text-sm text-gray-500 dark:text-gray-400">Menampilkan data...</span>
+      </div>
+      <div id="auditPagination" class="flex gap-1 text-gray-700 dark:text-gray-200"></div>
+    </div>
+
+  </div>
+</div>
+
+<div id="auditModal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onclick="closeModal()">
+  <div onclick="event.stopPropagation()" class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-4xl flex flex-col max-h-[90vh]">
+    
+    <div class="flex justify-between items-start border-b dark:border-gray-700 p-4">
+      <div>
+        <h2 class="text-lg font-bold text-gray-700 dark:text-white" id="modalTitle">Log Detail</h2>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          IP Address: <span id="modalIpAddress" class="font-mono bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded border dark:border-gray-600">-</span>
+        </p>
+      </div>
+      <button onclick="closeModal()" class="text-gray-400 hover:text-red-500 font-bold text-xl">&times;</button>
+    </div>
+
+    <div class="p-4 overflow-y-auto flex-1 bg-gray-50 dark:bg-gray-900">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="border dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 shadow-sm flex flex-col">
+          <div class="bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 font-semibold px-3 py-2 border-b dark:border-gray-700 rounded-t-lg">Data Lama (Sebelum)</div>
+          <pre id="oldValueViewer" class="p-3 text-xs text-gray-700 dark:text-gray-300 overflow-x-auto whitespace-pre-wrap flex-1"></pre>
+        </div>
+        <div class="border dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 shadow-sm flex flex-col">
+          <div class="bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-semibold px-3 py-2 border-b dark:border-gray-700 rounded-t-lg">Data Baru (Sesudah)</div>
+          <pre id="newValueViewer" class="p-3 text-xs text-gray-700 dark:text-gray-300 overflow-x-auto whitespace-pre-wrap flex-1"></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="fixed bottom-3 left-4 text-[11px] text-gray-400 dark:text-gray-300 bg-white/80 dark:bg-gray-800/80 backdrop-blur px-3 py-1 rounded-lg shadow z-40">
+  2026 © Application developed by IntegriHub-Bagas v1.0.0
+</div>
+
+<script src="superadmin-app.js"></script>
+<script src="audit-logs.js"></script>
+
+</body>
+</html>

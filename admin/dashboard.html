@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Dashboard - IntegriHub</title>
+  <link rel="icon" href="https://cdn.phototourl.com/free/2026-04-17-34afdbc3-383e-4a83-bee6-d9afb83d3bb6.png">
+  <script src="https://cdn.tailwindcss.com"></script>
+ <script>
+tailwind.config = {
+  darkMode: 'class'
+}
+</script>
+
+<script>
+(function(){
+  const theme = localStorage.getItem("theme") || "system";
+
+  if(theme === "dark"){
+    document.documentElement.classList.add("dark");
+  }
+  else if(theme === "light"){
+    document.documentElement.classList.remove("dark");
+  }
+  else {
+    if(window.matchMedia('(prefers-color-scheme: dark)').matches){
+      document.documentElement.classList.add("dark");
+    }
+  }
+})();
+</script>
+  
+  <script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@^1/index.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+
+<body class="bg-gray-100 dark:bg-gray-900 text-black dark:text-white" onload="init('dashboard')">
+
+  <!-- TOP BAR -->
+<div class="fixed top-0 left-0 w-full z-50 flex justify-between items-center p-3 bg-white dark:bg-gray-800 shadow">
+
+  <!-- KIRI (logo + nama) -->
+  <div class="flex items-center gap-2">
+    <img id="logo" class="h-8 rounded">
+    <div>
+      <div id="clientName" class="font-bold"></div>
+      <div class="text-xs text-gray-400">Admin</div>
+    </div>
+  </div>
+
+  <!-- KANAN (profile) -->
+  <div class="relative">
+    
+    <div onclick="toggleProfile()" 
+         class="flex items-center gap-2 cursor-pointer">
+
+      <div id="avatarCircle"
+           class="w-8 h-8 rounded-full bg-yellow-400 flex items-center justify-center text-white font-bold">
+      </div>
+
+      <div class="text-sm">
+        <div id="profileName" class="font-semibold"></div>
+        <div id="profileEmail" class="text-gray-400 text-xs"></div>
+      </div>
+    </div>
+
+    <div id="profileMenu"
+         class="hidden absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 border rounded shadow p-2">
+
+      <p class="text-xs text-gray-400 mb-1">Mode</p>
+
+      <button onclick="setTheme('light')" class="block w-full text-left p-1 hover:bg-gray-100 dark:hover:bg-gray-700">☀️ Light</button>
+      <button onclick="setTheme('dark')" class="block w-full text-left p-1 hover:bg-gray-100 dark:hover:bg-gray-700">🌙 Dark</button>
+      <button onclick="setTheme('system')" class="block w-full text-left p-1 hover:bg-gray-100 dark:hover:bg-gray-700">💻 System</button>
+
+      <hr class="my-2">
+
+      <button onclick="logout()" class="text-red-500 text-sm w-full text-left">Logout</button>
+    </div>
+
+  </div>
+
+</div>
+
+<div class="flex">
+
+  <div class="w-64 bg-white dark:bg-gray-800 shadow border-r dark:border-gray-700 p-4 fixed top-[60px] left-0 h-[calc(100vh-60px)] overflow-y-auto z-40 flex flex-col justify-between">
+    
+    <div>
+      <button id="menuDashboard" onclick="location.href='dashboard.html'" class="flex items-center w-full text-left px-4 py-2.5 rounded-lg mb-2 bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 font-bold transition duration-200 ease-in-out">
+        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+        Dashboard
+      </button>
+
+      <button id="menuMessage" onclick="location.href='message.html'" class="flex items-center w-full text-left px-4 py-2.5 rounded-lg mb-2 bg-transparent text-gray-600 dark:text-gray-300 hover:text-blue-600 hover:bg-transparent dark:hover:text-blue-400 dark:hover:bg-transparent transition duration-200 ease-in-out font-medium">
+        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+        Message
+      </button>
+
+      <button id="menuTemplate" onclick="location.href='template.html'" class="flex items-center w-full text-left px-4 py-2.5 rounded-lg mb-2 bg-transparent text-gray-600 dark:text-gray-300 hover:text-blue-600 hover:bg-transparent dark:hover:text-blue-400 dark:hover:bg-transparent transition duration-200 ease-in-out font-medium">
+        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"></path></svg>
+        Template
+      </button>
+
+      <button id="menuCampaign" onclick="location.href='campaign.html'" class="flex items-center w-full text-left px-4 py-2.5 rounded-lg mb-2 bg-transparent text-gray-600 dark:text-gray-300 hover:text-blue-600 hover:bg-transparent dark:hover:text-blue-400 dark:hover:bg-transparent transition duration-200 ease-in-out font-medium">
+        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"></path></svg>
+        Campaign
+      </button>
+
+      <button id="menuReport" onclick="location.href='report.html'" class="flex items-center w-full text-left px-4 py-2.5 rounded-lg mb-2 bg-transparent text-gray-600 dark:text-gray-300 hover:text-blue-600 hover:bg-transparent dark:hover:text-blue-400 dark:hover:bg-transparent transition duration-200 ease-in-out font-medium">
+        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+        Report
+      </button>
+
+      <button id="menuSettings" onclick="location.href='settings.html'" class="flex items-center w-full text-left px-4 py-2.5 rounded-lg mb-2 bg-transparent text-gray-600 dark:text-gray-300 hover:text-blue-600 hover:bg-transparent dark:hover:text-blue-400 dark:hover:bg-transparent transition duration-200 ease-in-out font-medium">
+        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <rect x="4" y="8" width="16" height="12" rx="2" ry="2"></rect>
+  <path d="M2 14h2"></path>
+  <path d="M20 14h2"></path>
+  <path d="M15 13v2"></path>
+  <path d="M9 13v2"></path>
+  <path d="M12 8V4"></path>
+  <path d="M12 4m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"></path>
+</svg>
+Chatbot Settings
+</button>
+
+     <button id="menuAccount" onclick="location.href='account.html'" class="flex items-center w-full text-left px-4 py-2.5 rounded-lg mb-2 bg-transparent text-gray-600 dark:text-gray-300 hover:text-blue-600 hover:bg-transparent dark:hover:text-blue-400 dark:hover:bg-transparent transition duration-200 ease-in-out font-medium">
+    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+    </svg>
+    Account & Webhooks
+</button>
+    </div>
+
+    <div>
+      <button onclick="logout()" class="w-full flex items-center justify-center bg-red-50 text-red-600 border border-red-200 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400 py-2 rounded-lg mt-4 shadow-sm font-bold hover:bg-red-100 dark:hover:bg-red-900/50 transition duration-200 ease-in-out">
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+        Logout
+      </button>
+      <div class="text-center mt-4 text-[10px] text-gray-400 dark:text-gray-500">
+        2026 © IntegriHub v1.0.0
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- CONTENT -->
+<div class="flex-1 ml-64 p-4 mt-[60px] overflow-y-auto h-[calc(100vh-60px)]">
+
+ <!-- ✅ DASHBOARD VIEW (KPI AGENT) -->
+<div id="dashboardView" class="p-4">
+
+  <!-- WELCOME (biar ga hilang) -->
+  <h1 class="text-2xl font-bold mb-2 text-gray-700 dark:text-white">
+    Selamat Datang 👋 <span id="welcomeBig"></span>
+  </h1>
+
+  <!-- KPI TITLE -->
+  <h2 class="text-xl font-semibold mb-4">📊 KPI Agent</h2>
+  <!-- FILTER KPI -->
+<div class="flex gap-2 mb-4 items-center">
+
+  <input type="date" id="kpiStart"
+    class="border p-2 rounded text-sm bg-white dark:bg-gray-800">
+
+  <input type="date" id="kpiEnd"
+    class="border p-2 rounded text-sm bg-white dark:bg-gray-800">
+
+  <button onclick="loadKPI()"
+    class="px-3 py-2 rounded text-white bg-blue-500">
+    Filter
+  </button>
+
+  <button onclick="exportKPI()"
+    class="px-3 py-2 rounded text-white bg-green-500">
+    Download Report
+  </button>
+
+</div>
+  
+  <div id="kpiSummary" class="grid grid-cols-3 gap-4 mb-4"></div>
+
+  <!-- TABLE -->
+  <div class="bg-white dark:bg-gray-800 rounded shadow p-4 overflow-x-auto">
+    <table class="w-full text-sm mb-4">
+      <thead>
+        <tr class="border-b text-gray-700 dark:text-gray-300">
+          <th class="p-2 text-left">Agent</th>
+          <th class="p-2">Total Chat</th>
+          <th class="p-2">Total Resolved</th>
+          <th class="p-2">Avg Response</th>
+          <th class="p-2">SLA</th>
+          <th class="p-2">Status</th>
+        </tr>
+      </thead>
+      <tbody id="kpiTable"></tbody>
+    </table>
+
+    <div class="flex justify-between items-center border-t dark:border-gray-700 pt-4">
+      <div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+        <span>Tampilkan:</span>
+        <select id="kpiLimit" onchange="changeKpiLimit()" class="border p-1 rounded bg-white dark:bg-gray-700 dark:border-gray-600 outline-none">
+          <option value="5">5</option>
+          <option value="10" selected>10</option>
+          <option value="15">15</option>
+        </select>
+        <span id="kpiTotalInfo" class="ml-2 text-xs"></span>
+      </div>
+      <div id="kpiPagination" class="flex gap-1 text-sm"></div>
+    </div>
+  </div>
+ <!-- ✅ CHART KPI (WAJIB DI DALAM dashboardView) -->
+  <div class="mt-6 bg-white dark:bg-gray-800 p-4 rounded shadow h-80 relative">
+  <h3 class="font-semibold mb-2">📊 Statistik Agent</h3>
+  <canvas id="kpiChart" class="!h-full !w-full"></canvas>
+</div>
+
+</div>
+</div> <!-- END CONTENT -->
+
+</div> <!-- END WRAPPER FLEX (SIDEBAR + CONTENT) -->
+
+
+<!-- LOAD JS -->
+<script src="app.js"></script>
+
+</body>
+</html>

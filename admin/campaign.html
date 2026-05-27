@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Campaign - IntegriHub</title>
+  <link rel="icon" href="https://cdn.phototourl.com/free/2026-04-17-34afdbc3-383e-4a83-bee6-d9afb83d3bb6.png">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { darkMode: 'class' }
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <script>
+  (function(){
+    const theme = localStorage.getItem("theme") || "system";
+    if(theme === "dark") document.documentElement.classList.add("dark");
+    else if(theme === "light") document.documentElement.classList.remove("dark");
+    else if(window.matchMedia('(prefers-color-scheme: dark)').matches) document.documentElement.classList.add("dark");
+  })();
+  </script>
+</head>
+
+<body class="bg-gray-100 dark:bg-gray-900 text-black dark:text-white" onload="init('campaign')">
+
+<div class="fixed top-0 left-0 w-full z-50 flex justify-between items-center p-3 bg-white dark:bg-gray-800 shadow">
+  <div class="flex items-center gap-2">
+    <img id="logo" class="h-8 rounded">
+    <div>
+      <div id="clientName" class="font-bold"></div>
+      <div class="text-xs text-gray-400">Admin</div>
+    </div>
+  </div>
+  <div class="relative">
+    <div onclick="toggleProfile()" class="flex items-center gap-2 cursor-pointer">
+      <div id="avatarCircle" class="w-8 h-8 rounded-full bg-yellow-400 flex items-center justify-center text-white font-bold"></div>
+      <div class="text-sm">
+        <div id="profileName" class="font-semibold"></div>
+        <div id="profileEmail" class="text-gray-400 text-xs"></div>
+      </div>
+    </div>
+    <div id="profileMenu" class="hidden absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 border rounded shadow p-2 z-50">
+      <button onclick="setTheme('light')" class="block w-full text-left p-1">☀️ Light</button>
+      <button onclick="setTheme('dark')" class="block w-full text-left p-1">🌙 Dark</button>
+      <button onclick="setTheme('system')" class="block w-full text-left p-1">💻 System</button>
+      <hr class="my-2">
+      <button onclick="logout()" class="text-red-500 text-sm w-full text-left">Logout</button>
+    </div>
+  </div>
+</div>
+
+<div class="flex">
+
+  <div class="w-64 bg-white dark:bg-gray-800 shadow border-r dark:border-gray-700 p-4 fixed top-[60px] left-0 h-[calc(100vh-60px)] overflow-y-auto z-40 flex flex-col justify-between">
+    
+    <div>
+      <button onclick="location.href='dashboard.html'" class="flex items-center w-full text-left px-4 py-2.5 rounded-lg mb-2 bg-transparent text-gray-600 dark:text-gray-300 hover:text-blue-600 hover:bg-transparent dark:hover:text-blue-400 dark:hover:bg-transparent transition duration-200 ease-in-out font-medium">
+        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+        Dashboard
+      </button>
+      
+      <button onclick="location.href='message.html'" class="flex items-center w-full text-left px-4 py-2.5 rounded-lg mb-2 bg-transparent text-gray-600 dark:text-gray-300 hover:text-blue-600 hover:bg-transparent dark:hover:text-blue-400 dark:hover:bg-transparent transition duration-200 ease-in-out font-medium">
+        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+        Message
+      </button>
+      
+      <button onclick="location.href='template.html'" class="flex items-center w-full text-left px-4 py-2.5 rounded-lg mb-2 bg-transparent text-gray-600 dark:text-gray-300 hover:text-blue-600 hover:bg-transparent dark:hover:text-blue-400 dark:hover:bg-transparent transition duration-200 ease-in-out font-medium">
+        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"></path></svg>
+        Template
+      </button>
+      
+      <button onclick="location.href='campaign.html'" class="flex items-center w-full text-left px-4 py-2.5 rounded-lg mb-2 bg-green-500 text-white dark:bg-blue-900/30 dark:text-blue-400 font-bold transition duration-200 ease-in-out">
+    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"></path></svg>
+    Campaign
+  </button>
+      
+      <button onclick="location.href='report.html'" class="flex items-center w-full text-left px-4 py-2.5 rounded-lg mb-2 bg-transparent text-gray-600 dark:text-gray-300 hover:text-blue-600 hover:bg-transparent dark:hover:text-blue-400 dark:hover:bg-transparent transition duration-200 ease-in-out font-medium">
+        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+        Report
+      </button>
+      
+      <button onclick="location.href='settings.html'" class="flex items-center w-full text-left px-4 py-2.5 rounded-lg mb-2 bg-transparent text-gray-600 dark:text-gray-300 hover:text-blue-600 hover:bg-transparent dark:hover:text-blue-400 dark:hover:bg-transparent transition duration-200 ease-in-out font-medium">
+        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <rect x="4" y="8" width="16" height="12" rx="2" ry="2"></rect>
+  <path d="M2 14h2"></path>
+  <path d="M20 14h2"></path>
+  <path d="M15 13v2"></path>
+  <path d="M9 13v2"></path>
+  <path d="M12 8V4"></path>
+  <path d="M12 4m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"></path>
+</svg>
+Chatbot Settings
+</button>
+
+      <button id="menuAccount" onclick="location.href='account.html'" class="flex items-center w-full text-left px-4 py-2.5 rounded-lg mb-2 bg-transparent text-gray-600 dark:text-gray-300 hover:text-blue-600 hover:bg-transparent dark:hover:text-blue-400 dark:hover:bg-transparent transition duration-200 ease-in-out font-medium">
+    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+    </svg>
+    Account & Webhooks
+</button>
+    </div>
+
+    <div>
+      <button onclick="logout()" class="w-full flex items-center justify-center bg-red-50 text-red-600 border border-red-200 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400 py-2 rounded-lg mt-4 shadow-sm font-bold hover:bg-red-100 dark:hover:bg-red-900/50 transition duration-200 ease-in-out">
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+        Logout
+      </button>
+      <div class="text-center mt-4 text-[10px] text-gray-400 dark:text-gray-500">
+        2026 © IntegriHub v1.0.0
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+  <div class="flex-1 ml-64 mt-[70px] p-6 relative">
+
+    <div id="campaignListView" class="w-full mx-auto">
+      
+      <h2 class="text-2xl font-bold mb-6 text-gray-800 dark:text-white">Campaign List</h2>
+
+      <div class="flex justify-between items-center mb-6">
+        <div class="w-1/3 relative">
+          <input type="text" id="searchInput" onkeyup="applyFilter()" placeholder="Search Campaign or Template Name..." class="w-full border p-2 pl-3 rounded bg-white dark:bg-gray-800 shadow-sm outline-none focus:border-blue-500">
+        </div>
+        <button onclick="showCreateCampaign()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded shadow font-semibold">
+          + Create Campaign
+        </button>
+      </div>
+
+      <div class="overflow-x-auto shadow-sm rounded-t border border-gray-200 dark:border-gray-700 pb-10">
+        <table class="w-full text-sm bg-white dark:bg-gray-800">
+          <thead class="bg-gray-100 dark:bg-gray-700 text-left border-b border-gray-200 dark:border-gray-700">
+            <tr>
+              <th class="p-3">Campaign Name</th>
+              <th class="p-3">Template Name</th>
+              <th class="p-3">Created At</th> <th class="p-3 text-center">Status</th>
+              <th class="p-3 text-center">Total</th>
+              <th class="p-3 text-center">Sent</th>
+              <th class="p-3 text-center">Delivered</th>
+              <th class="p-3 text-center">Read</th>
+              <th class="p-3 text-center">Failed</th>
+              <th class="p-3 text-center">Action</th> 
+            </tr>
+          </thead>
+          <tbody id="campaignTable" class="divide-y divide-gray-200 dark:divide-gray-700"></tbody>
+        </table>
+      </div>
+
+      <div class="flex justify-between items-center mt-4 bg-white dark:bg-gray-800 p-3 rounded shadow-sm border border-gray-200 dark:border-gray-700 text-sm">
+        <div class="flex items-center gap-3">
+          <select id="itemsPerPage" onchange="changeItemsPerPage()" class="border p-1 rounded bg-white dark:bg-gray-700 outline-none">
+            <option value="10">10 / page</option>
+            <option value="25">25 / page</option>
+            <option value="50">50 / page</option>
+          </select>
+          <span id="paginationInfo" class="text-gray-500">Showing 0 of 0</span>
+        </div>
+        <div id="paginationControls" class="flex gap-1"></div>
+      </div>
+    </div>
+
+    <div id="step1" class="max-w-2xl mx-auto hidden">
+      <div class="flex items-center gap-4 mb-4">
+        <button onclick="goBackToList()" class="border border-red-500 text-red-500 px-4 py-1 rounded hover:bg-red-500 hover:text-white transition">← BACK TO LIST</button>
+        <h2 class="text-xl font-bold">Create Campaign Blast</h2>
+      </div>
+      <div class="bg-white dark:bg-gray-800 p-6 rounded shadow border border-gray-200 dark:border-gray-700">
+        <label class="block text-sm font-semibold mb-1">Nama Campaign</label>
+        <input id="campaignName" placeholder="Contoh: Promo Ramadhan" class="w-full border p-2 rounded mb-4 bg-white dark:bg-gray-700 outline-none focus:border-blue-500">
+        <label class="block text-sm font-semibold mb-1">Pilih Template</label>
+        <div class="relative w-full mb-5">
+          <input type="text" id="templateSearch" placeholder="Ketik untuk mencari template..." onkeyup="filterTemplates()" class="w-full border p-2 rounded bg-white dark:bg-gray-700 cursor-pointer outline-none focus:border-blue-500" onclick="document.getElementById('templateDropdown').classList.toggle('hidden')">
+          <input type="hidden" id="campaignTemplateValue">
+          <div id="templateDropdown" class="absolute z-10 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-lg hidden max-h-48 overflow-y-auto mt-1"></div>
+        </div>
+        <div class="mb-5">
+          <p class="mb-2 font-semibold">Pilih Data Source (Kontak)</p>
+          <div class="flex gap-3">
+            <button onclick="campaignSelectSource('manual')" id="btnManual" class="flex-1 border p-3 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition">✍️ Manual Input</button>
+            <button onclick="campaignSelectSource('upload')" id="btnUpload" class="flex-1 border p-3 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition">📂 Upload Excel</button>
+          </div>
+        </div>
+        <button onclick="campaignGoStep2()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded w-full font-bold transition">Next →</button>
+      </div>
+    </div>
+
+    <div id="step2" class="max-w-3xl mx-auto hidden">
+      <div class="flex items-center gap-4 mb-4">
+        <button onclick="goBackToStep1()" class="border border-red-500 text-red-500 px-4 py-1 rounded hover:bg-red-500 hover:text-white transition">← BACK</button>
+        <h2 class="text-xl font-bold">Step 2 - Data & Mapping</h2>
+      </div>
+      <div class="bg-white dark:bg-gray-800 p-6 rounded shadow border border-gray-200 dark:border-gray-700">
+        <div id="manualBox" class="hidden">
+          <label class="font-semibold block mb-2">Input Data</label>
+          <textarea id="campaignManualInput" placeholder="628xxx,Nama,Param1,Param2&#10;628xxx,Nama,Param1,Param2" class="w-full border p-2 rounded mt-2 h-40 bg-white dark:bg-gray-700 outline-none"></textarea>
+          <p class="text-xs text-gray-400 mt-1">Format: Nomor HP, Nama, Param1, Param2...</p>
+        </div>
+        <div id="uploadBox" class="hidden">
+          <label class="font-semibold block mb-3">Upload File Excel (.xlsx)</label>
+          <div class="flex items-center gap-3">
+            <input type="file" id="campaignFile" accept=".xlsx, .xls, .csv" class="border p-1.5 rounded bg-white dark:bg-gray-700 text-sm flex-1">
+            <button onclick="clearSelectedFile()" class="bg-red-500 text-white px-3 py-1.5 rounded font-bold hover:bg-red-600">X</button>
+            <button onclick="downloadFormatXLSX()" class="bg-green-500 text-white px-4 py-1.5 rounded text-sm hover:bg-green-600 font-semibold shadow-sm">📥 Download Format Excel</button>
+          </div>
+        </div>
+        <div class="mt-8">
+          <h3 class="font-bold text-lg mb-3">Mapping Parameter Teks (Body)</h3>
+          <div id="paramMappingBox" class="bg-blue-50 dark:bg-gray-900 p-4 rounded border border-blue-100 dark:border-gray-700"></div>
+        </div>
+        <div class="mt-6">
+          <button onclick="campaignPreviewData()" class="bg-purple-600 hover:bg-purple-700 text-white font-bold px-4 py-3 rounded w-full shadow">Preview →</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="step3" class="max-w-3xl mx-auto hidden">
+       <div class="flex items-center gap-4 mb-4">
+        <button onclick="goBackToStep2()" class="border border-red-500 text-red-500 px-4 py-1 rounded hover:bg-red-500 hover:text-white transition">← BACK</button>
+        <h2 class="text-xl font-bold">Preview Campaign</h2>
+      </div>
+      <div id="previewContainer" class="bg-white dark:bg-gray-800 p-4 border border-gray-200 dark:border-gray-700 rounded shadow max-h-[400px] overflow-y-auto"></div>
+      <div class="flex gap-3 mt-5">
+        <button id="btnSendNow" onclick="campaignSend('now')" class="bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded flex-1 font-bold shadow transition">🚀 Kirim Sekarang</button>
+        <button id="btnToggleSchedule" onclick="toggleScheduleBox()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded flex-1 font-bold shadow transition">📅 Jadwalkan</button>
+        <button onclick="cancelBlast()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-3 rounded font-bold shadow transition">❌ Cancel Blast</button>
+      </div>
+      <div id="scheduleBox" class="hidden mt-4 p-5 border border-blue-200 bg-blue-50 dark:bg-gray-800 dark:border-gray-700 rounded shadow-sm">
+        <label class="block text-sm font-semibold mb-2 text-blue-800 dark:text-blue-300">Pilih Tanggal & Jam WIB</label>
+        <input type="datetime-local" id="scheduleTime" class="w-full border border-blue-300 p-2 rounded mb-3 bg-white dark:bg-gray-700 outline-none focus:ring-2 focus:ring-blue-500">
+        <div class="flex gap-2">
+           <button onclick="campaignSend('schedule')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded flex-1 font-bold shadow">Simpan & Jadwalkan</button>
+           <button onclick="toggleScheduleBox()" class="bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded font-bold shadow">Batal</button>
+        </div>
+      </div>
+    </div>
+
+  </div> 
+</div> 
+
+<script src="app.js"></script>
+<script src="campaign.js"></script>
+</body>
+</html>
