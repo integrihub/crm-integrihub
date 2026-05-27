@@ -475,15 +475,10 @@ async function init(page){
   if(kpiInterval) clearInterval(kpiInterval);
 
   if(!CID){
-    alert("Session expired");
-    // Gunakan deteksi root path agar aman saat migrasi
-    const currentPath = window.location.pathname;
-    const basePath = currentPath.includes("/crm-integrihub") ? "/crm-integrihub" : "";
-    
-    // Harus ada slash (/) setelah basePath agar tidak relative path
-    window.location.href = basePath + "/login.html"; 
-    return;
-  }
+  alert("Session expired");
+  window.location.replace("../login.html");
+  return;
+}
 
   await loadBranding();
   loadProfile();
@@ -1549,12 +1544,7 @@ function exportKPI(){
 function logout(){
   localStorage.clear();
   sessionStorage.clear();
-
-  // Otomatis menyesuaikan path saat di staging maupun production vendor
-  const currentPath = window.location.pathname;
-  const basePath = currentPath.includes("/crm-integrihub") ? "/crm-integrihub" : "";
-  
-  window.location.href = basePath + "/login.html";
+  window.location.replace("../login.html");
 }
 
 //SHOW TEMPLATE
