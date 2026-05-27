@@ -475,10 +475,11 @@ async function init(page){
   if(kpiInterval) clearInterval(kpiInterval);
 
   if(!CID){
-    alert("Session expired");
-    location = "/crm-integrihub/login.html";
-    return;
-  }
+   alert("Session expired");
+   // Gunakan slash "/" di depan untuk selalu mengarah ke root domain
+   window.location.href = "/login.html"; 
+   return;
+}
 
   await loadBranding();
   loadProfile();
@@ -1542,8 +1543,12 @@ function exportKPI(){
 
 // LOGOUT
 function logout(){
- localStorage.clear();
- location="/crm-integrihub/login.html";
+  // 1. Bersihkan semua riwayat login (Local & Session)
+  localStorage.clear();
+  sessionStorage.clear();
+
+  // 2. Pindah ke halaman login menggunakan path relatif (bersih)
+  window.location.href = "login.html";
 }
 
 //SHOW TEMPLATE
