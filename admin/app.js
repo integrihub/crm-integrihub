@@ -475,11 +475,15 @@ async function init(page){
   if(kpiInterval) clearInterval(kpiInterval);
 
   if(!CID){
-   alert("Session expired");
-   // Gunakan slash "/" di depan untuk selalu mengarah ke root domain
-   window.location.href = "/login.html"; 
-   return;
-}
+    alert("Session expired");
+    // Gunakan deteksi root path agar aman saat migrasi
+    const currentPath = window.location.pathname;
+    const basePath = currentPath.includes("/crm-integrihub") ? "/crm-integrihub" : "";
+    
+    // Harus ada slash (/) setelah basePath agar tidak relative path
+    window.location.href = basePath + "/login.html"; 
+    return;
+  }
 
   await loadBranding();
   loadProfile();
