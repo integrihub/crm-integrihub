@@ -1541,14 +1541,16 @@ function exportKPI(){
   );
 }
 
-// LOGOUT
+// ================= LOGOUT =================
 function logout(){
-  // 1. Bersihkan semua riwayat login (Local & Session)
   localStorage.clear();
   sessionStorage.clear();
 
-  // 2. Pindah ke halaman login menggunakan path relatif (bersih)
-  window.location.href = "login.html";
+  // Otomatis menyesuaikan path saat di staging maupun production vendor
+  const currentPath = window.location.pathname;
+  const basePath = currentPath.includes("/crm-integrihub") ? "/crm-integrihub" : "";
+  
+  window.location.href = basePath + "/login.html";
 }
 
 //SHOW TEMPLATE
