@@ -8,22 +8,22 @@
   <script>
     const role = localStorage.getItem("role");
 
-    // Menggunakan path paling standar, aman dari looping
+    // 🔥 PERUBAHAN: Tambahkan garis miring (/) di depan semua URL
     if (!role) {
-      window.location.replace("login.html");
+      window.location.replace("/login.html");
     } 
     else if (role === "super_admin") {
-      window.location.replace("super-admin/home.html");
+      window.location.replace("/super-admin/home.html");
     } 
     else if (role === "admin") {
-      window.location.replace("admin/dashboard.html");
+      window.location.replace("/admin/dashboard.html");
     } 
     else if (role === "agent") {
-      window.location.replace("agent.html");
+      window.location.replace("/agent.html");
     } 
     else {
       localStorage.clear();
-      window.location.replace("login.html");
+      window.location.replace("/login.html");
     }
   </script>
 </head>

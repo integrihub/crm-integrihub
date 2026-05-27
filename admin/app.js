@@ -475,10 +475,11 @@ async function init(page){
   if(kpiInterval) clearInterval(kpiInterval);
 
   if(!CID){
-  alert("Session expired");
-  window.location.replace("../login.html");
-  return;
-}
+    alert("Session expired");
+    // Langsung tembak ke root domain juga
+    window.location.replace("/login.html"); 
+    return;
+  }
 
   await loadBranding();
   loadProfile();
@@ -1544,7 +1545,9 @@ function exportKPI(){
 function logout(){
   localStorage.clear();
   sessionStorage.clear();
-  window.location.replace("../login.html");
+  
+  // Langsung tembak ke root domain, sangat aman untuk migrasi vendor!
+  window.location.replace("/login.html");
 }
 
 //SHOW TEMPLATE
