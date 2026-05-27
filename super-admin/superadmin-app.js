@@ -633,12 +633,14 @@ function applyTheme(){
 window.addEventListener("load", () => {
 
   // 🔥 PAKSA SESSION (BIAR GA KE-BLOCK LOGIN)
-  localStorage.setItem("is_login", "true");
-  localStorage.setItem("role", "super_admin");
+  // MATIKAN 2 BARIS INI:
+  // localStorage.setItem("is_login", "true");
+  // localStorage.setItem("role", "super_admin");
 
-  if(!localStorage.getItem("email")){
-    localStorage.setItem("email", "admin@mail.com");
-  }
+  // MATIKAN JUGA BARIS INI KARENA INI EMAIL DUMMY:
+  // if(!localStorage.getItem("email")){
+  //   localStorage.setItem("email", "admin@mail.com");
+  // }
 
   // PROFILE + THEME
   loadProfile();
