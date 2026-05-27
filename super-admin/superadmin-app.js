@@ -21,9 +21,13 @@ function closeAddAgentModal(){
 
 
   // ================= LOGOUT =================
-function logout(){
-  localStorage.removeItem("lastPage"); // ✅ hapus state page saja
-  window.location.href = "/crm-integrihub/login.html"; // ✅ redirect aman
+function logout() {
+  // 1. Hapus semua data yang berhubungan dengan sesi login (Bearer token, client_id, dll)
+  localStorage.clear(); 
+  sessionStorage.clear();
+
+  // 2. Gunakan slash "/" di depan untuk mengarahkan ke root (lokasi file login yang benar)
+  window.location.href = "/login.html";
 }
 
 // ================= AGENT =================
