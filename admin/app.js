@@ -2472,6 +2472,10 @@ function getFilteredData(){
 function renderList(){
 
   const tbody = document.getElementById("templateList");
+  
+  // 🔥 FIX 1: Cegah sistem crash jika tabel tidak ditemukan (saat berada di halaman detail)
+  if (!tbody) return; 
+
   const data = getFilteredData();
 
   const start = (currentPage - 1) * limit;
@@ -2642,14 +2646,16 @@ function goDetail(id){
 // ================= INIT =================
 window.addEventListener("DOMContentLoaded", () => {
 
-  // halaman list
-  if(window.location.pathname.includes("template.html")){
-    loadTemplatesList();
-  }
+  const path = window.location.pathname;
 
-  // halaman detail
-  if(window.location.pathname.includes("template-detail.html")){
+  // 🔥 FIX 2: Sesuaikan deteksi URL karena Cloudflare Pages sering menghilangkan akhiran ".html"
+  if(path.includes("template-detail")){
+    // Eksekusi fungsi halaman detail
     loadDetail();
+  } 
+  else if(path.includes("template")){
+    // Eksekusi fungsi halaman list (Pastikan tidak tertukar dengan halaman detail)
+    loadTemplatesList();
   }
 
 });
