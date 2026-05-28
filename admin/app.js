@@ -1576,7 +1576,9 @@ async function loadTemplates() {
 
   console.log("TEMPLATES:", data); // 🔥 debug
 
-  renderTemplates(data);
+  // 🔥 FIX: Masukkan data ke memori global, lalu panggil fungsi render yang BENAR
+  allTemplates = data || [];
+  renderList(); 
 }
 
 //REDIRECT TEMPLATE DETAIL 
@@ -2001,26 +2003,26 @@ if(!Array.isArray(t.buttons)){
   if(t.header_type === "document" && t.header_value){
 
   const fileUrl = t.header_value;
-  const fileName = fileUrl.split("/").pop() || "document";
-
-  const isPreviewable = fileUrl.toLowerCase().endsWith(".pdf");
+  // 🔥 FIX: Paksa data menjadi String yang aman sebelum dipecah atau dikecilkan hurufnya
+  const safeUrl = String(fileUrl || "");
+  const fileName = safeUrl.split("/").pop() || "document";
+  
+  // 🔥 FIX: Gunakan optional chaining (?.) untuk menghindari crash jika format URL aneh
+  const isPreviewable = safeUrl.toLowerCase().endsWith(".pdf");
 
   headerHTML = `
     <div class="mb-1">
-
       <div class="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 p-2 rounded text-xs">
         📄 ${fileName}
       </div>
-
       ${
         isPreviewable
-          ? `<iframe src="${fileUrl}" class="w-full h-40 mt-1 rounded border"></iframe>`
-          : `<a href="${fileUrl}" target="_blank"
+          ? `<iframe src="${safeUrl}" class="w-full h-40 mt-1 rounded border"></iframe>`
+          : `<a href="${safeUrl}" target="_blank"
                class="block mt-1 text-blue-400 underline text-xs">
                🔗 Open Document
              </a>`
       }
-
     </div>
   `;
 }
