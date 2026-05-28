@@ -611,7 +611,9 @@ async function campaignReport(id) {
 }
 
 window.addEventListener("DOMContentLoaded", () => {
-  if (window.location.pathname.includes("campaign.html")) {
+  // 🔥 FIX BUGS: Deteksi nama halaman dengan cara yang kebal terhadap Clean URL Cloudflare
+  const path = window.location.pathname;
+  if (path.includes("campaign") && !path.includes("template")) {
     campaignLoadTemplates();
     campaignLoadList();
   }
