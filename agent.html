@@ -35,9 +35,12 @@
 <div class="flex justify-between items-center p-3 bg-white dark:bg-gray-800 shadow">
 
   <div class="flex items-center gap-3">
+    <button onclick="toggleSidebar()" class="md:hidden text-gray-600 dark:text-gray-300 hover:text-blue-600 focus:outline-none">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+    </button>
+
     <img id="logo" class="max-h-10 w-auto max-w-[150px] object-contain rounded">
-    <div>
-      <div id="clientName" class="font-bold text-sm"></div>
+    <div class="hidden sm:block"> <div id="clientName" class="font-bold text-sm"></div>
       <div class="text-xs text-gray-400">Agent Panel</div>
     </div>
   </div>
@@ -70,9 +73,11 @@
   </div>
 </div>
 
-<div class="flex-1 flex min-h-0">
+<div class="flex-1 flex min-h-0 relative">
 
- <div class="w-64 flex-none bg-white dark:bg-gray-800 shadow border-r dark:border-gray-700 p-4 flex flex-col justify-between overflow-y-auto z-10">
+  <div id="sidebarOverlay" onclick="toggleSidebar()" class="absolute inset-0 bg-black/50 z-30 hidden md:hidden transition-opacity"></div>
+
+  <div id="sidebar" class="w-64 flex-none bg-white dark:bg-gray-800 shadow border-r dark:border-gray-700 p-4 flex flex-col justify-between overflow-y-auto z-40 absolute md:relative h-full transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out">
     
     <div>
       <a href="?page=dashboard" id="menuDashboard" onclick="navigateMenu(event, 'dashboard')" class="menu-btn flex items-center w-full text-left px-4 py-2.5 rounded-lg mb-2 text-gray-600 dark:text-gray-300 font-medium transition duration-200">
@@ -336,7 +341,17 @@ function formatTimeShort(t) {
   }
 }
 
+// ================= UI MOBILE =================
+function toggleSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebarOverlay');
   
+  if (sidebar && overlay) {
+    sidebar.classList.toggle('-translate-x-full');
+    overlay.classList.toggle('hidden');
+  }
+}
+
 //INIT PROFILE
 function initProfile(){
   const email = EMAIL || "user@mail.com";
