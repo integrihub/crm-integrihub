@@ -80,9 +80,13 @@ function selectTemplate(id) {
   }
 
   if (paramCount === 0) {
-    let strToCheck = templateObj.body || templateObj.content || JSON.stringify(templateObj) || "";
+    // 🔥 FIX: Baca seluruh objek template untuk mendeteksi {{angka}} di Header & CTA
+    // Jangan gunakan "templateObj.body ||" karena itu mengabaikan komponen lain!
+    let strToCheck = JSON.stringify(templateObj) || "";
     let matches = strToCheck.match(/\{\{(\d+)\}\}/g);
+    
     if (matches) {
+       // Kumpulkan semua angka unik dari seluruh komponen (Header, Body, Button)
        let uniqueParams = new Set(matches);
        paramCount = uniqueParams.size;
     }
