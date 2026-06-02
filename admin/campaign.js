@@ -71,26 +71,49 @@ function selectTemplate(id) {
   window.campaignSelectedTemplateName = templateObj.name; 
   
   let paramCount = 0;
-  if (templateObj.params_json) {
-    try {
-      let parsed = typeof templateObj.params_json === 'string' ? JSON.parse(templateObj.params_json) : templateObj.params_json;
-      if (Array.isArray(parsed)) paramCount = parsed.length;
-      else if (typeof parsed === 'object') paramCount = Object.keys(parsed).length;
-    } catch(e) {}
+
+  try {
+    // 1. Deteksi Parameter di Header
+    const headMatch = (templateObj.header_value || templateObj.header || "").match(/\{\{(\d+)\}\}/);
+    if (headMatch) paramCount += 1;
+
+    // 2. Deteksi Parameter di Body
+    const bodyText = templateObj.body || templateObj.content || "";
+    const bodyMatches = bodyText.match(/\{\{(\d+)\}\}/g);
+    if (bodyMatches) {
+       paramCount += new Set(bodyMatches).size; 
+    }
+
+    // 3. Deteksi Parameter di Button (CTA URL)
+    let buttonsStr = templateObj.buttons_json || templateObj.buttons || "[]";
+    let buttons = [];
+    
+    // Pastikan data aman sebelum di-parse
+    if (typeof buttonsStr === 'string') {
+        buttons = JSON.parse(buttonsStr);
+    } else if (Array.isArray(buttonsStr)) {
+        buttons = buttonsStr;
+    }
+
+    if (Array.isArray(buttons)) {
+        buttons.forEach(btn => {
+           if (btn && (btn.url || btn.value || "").match(/\{\{(\d+)\}\}/)) {
+              paramCount += 1;
+           }
+        });
+    }
+
+    // 4. Fallback Terakhir
+    if (paramCount === 0) {
+       let strToCheck = JSON.stringify(templateObj) || "";
+       let matches = strToCheck.match(/\{\{(\d+)\}\}/g);
+       if (matches) paramCount = new Set(matches).size;
+    }
+  } catch (err) {
+    console.warn("Gagal menghitung parameter, fallback ke 0", err);
+    paramCount = 0;
   }
 
-  if (paramCount === 0) {
-    // 🔥 FIX: Baca seluruh objek template untuk mendeteksi {{angka}} di Header & CTA
-    // Jangan gunakan "templateObj.body ||" karena itu mengabaikan komponen lain!
-    let strToCheck = JSON.stringify(templateObj) || "";
-    let matches = strToCheck.match(/\{\{(\d+)\}\}/g);
-    
-    if (matches) {
-       // Kumpulkan semua angka unik dari seluruh komponen (Header, Body, Button)
-       let uniqueParams = new Set(matches);
-       paramCount = uniqueParams.size;
-    }
-  }
   window.campaignTemplateParams = new Array(paramCount).fill("");
 }
 
