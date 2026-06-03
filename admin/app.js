@@ -1128,57 +1128,76 @@ function renderMessage(m){
     );
 
     if (realTpl) {
-       // 1. Ekstrak parameter BODY yang diisi oleh sistem/agen
-       let paramsArr = [];
-       const bodyComp = raw?.template?.components?.find(c => c.type === "body");
+       // 1. Ekstrak Parameter dari Raw Payload
+       let rawBodyParams = [];
+       let rawHeaderParams = [];
 
+       const bodyComp = raw?.template?.components?.find(c => c.type === "body");
+       const headerComp = raw?.template?.components?.find(c => c.type === "header");
+
+       // Ambil param body
        if (bodyComp && bodyComp.parameters) {
-           paramsArr = bodyComp.parameters.map(p => p.text || p.payload || "");
+           rawBodyParams = bodyComp.parameters.map(p => p.text || p.payload || "");
        } else if (parsed.body && Array.isArray(parsed.body)) {
-           paramsArr = parsed.body; // Ambil dari fallback backend jika ada
+           rawBodyParams = parsed.body;
        }
 
-       // Jahit parameter {{1}} ke dalam teks body aslinya
+       // Ambil param header
+       if (headerComp && headerComp.parameters) {
+           rawHeaderParams = headerComp.parameters.map(p => p.text || p.payload || "");
+       } else if (parsed.header && Array.isArray(parsed.header)) {
+           rawHeaderParams = parsed.header;
+       } else if (rawBodyParams.length > 0) {
+           // 🔥 FALLBACK OTOMATIS: Jika header param kosong di Payload, pinjam dari Body param pertama
+           rawHeaderParams = [rawBodyParams[0]];
+       }
+
+       // 2. Jahit BODY
        let stitchedBody = realTpl.body_text || realTpl.body || "";
-       paramsArr.forEach((val, i) => {
+       rawBodyParams.forEach((val, i) => {
            stitchedBody = stitchedBody.split(`{{${i+1}}}`).join(val);
        });
+       // Sapu bersih sisa {{..}} jika jumlah parameter kurang
+       stitchedBody = stitchedBody.replace(/\{\{\d+\}\}/g, "");
 
-       // 2. Ekstrak & Jahit parameter HEADER (Khusus Teks Dinamis)
+       // 3. Jahit HEADER
        let stitchedHeader = realTpl.header_value || "";
-       const headerComp = raw?.template?.components?.find(c => c.type === "header");
-       
-       if (realTpl.header_type === "text" && stitchedHeader.includes("{{1}}") && headerComp && headerComp.parameters) {
-           const headerParams = headerComp.parameters.map(p => p.text || p.payload || "");
-           headerParams.forEach((val, i) => {
+       if (realTpl.header_type === "text" && stitchedHeader.includes("{{1}}")) {
+           rawHeaderParams.forEach((val, i) => {
                stitchedHeader = stitchedHeader.split(`{{${i+1}}}`).join(val);
            });
+           // Sapu bersih sisa {{..}}
+           stitchedHeader = stitchedHeader.replace(/\{\{\d+\}\}/g, "");
        }
 
-       // Rakit ulang objek parsed dengan data utuh dan cantik
+       // Rakit ulang untuk ditampilkan
        parsed.header = realTpl.header_type ? { type: realTpl.header_type, value: stitchedHeader } : null;
        parsed.body = [stitchedBody];
        parsed.footer = realTpl.footer || "";
 
-       // 3. Jahit parameter URL pada BUTTON (Jika Dinamis)
+       // 4. Jahit URL BUTTONS
        let dbBtns = [];
        try { dbBtns = JSON.parse(realTpl.buttons_json || realTpl.buttons || "[]"); } catch(e){}
-       
-       // Tangkap parameter button dari raw payload jika ada
+
        const btnComps = raw?.template?.components?.filter(c => c.type === "button") || [];
 
        parsed.buttons = dbBtns.map((b, index) => {
            if(b.type === "quick_reply") return { type: "quick_reply", value: b.text || b.value };
            if(b.type === "phone") return { type: "phone", value: b.value || b.text };
            if(b.type === "flow") return { type: "flow", value: b.text || b.value };
-           
+
            if(b.type === "url") {
                let urlVal = b.value || b.text || "";
-               // Cari apakah ada payload dinamis {{1}} untuk tombol index ini
                const matchComp = btnComps.find(c => String(c.index) === String(index));
+
+               // Jika dinamis lewat payload
                if (matchComp && matchComp.parameters && matchComp.parameters[0] && urlVal.includes("{{1}}")) {
                    let dynText = matchComp.parameters[0].text || matchComp.parameters[0].payload || "";
-                   urlVal = urlVal.replace("{{1}}", dynText); // Replace {{1}} jadi data aslinya
+                   urlVal = urlVal.replace("{{1}}", dynText);
+               } 
+               // 🔥 Fallback URL dinamis jika index tidak dikirim dari API
+               else if (urlVal.includes("{{1}}") && rawBodyParams.length > 0) {
+                   urlVal = urlVal.replace("{{1}}", rawBodyParams[0]);
                }
                return { type: "url", value: urlVal };
            }
