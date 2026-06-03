@@ -1128,7 +1128,7 @@ function renderMessage(m){
     );
 
     if (realTpl) {
-       // Ekstrak parameter yang diisi oleh sistem/agen
+       // 1. Ekstrak parameter BODY yang diisi oleh sistem/agen
        let paramsArr = [];
        const bodyComp = raw?.template?.components?.find(c => c.type === "body");
 
@@ -1144,18 +1144,44 @@ function renderMessage(m){
            stitchedBody = stitchedBody.split(`{{${i+1}}}`).join(val);
        });
 
+       // 2. Ekstrak & Jahit parameter HEADER (Khusus Teks Dinamis)
+       let stitchedHeader = realTpl.header_value || "";
+       const headerComp = raw?.template?.components?.find(c => c.type === "header");
+       
+       if (realTpl.header_type === "text" && stitchedHeader.includes("{{1}}") && headerComp && headerComp.parameters) {
+           const headerParams = headerComp.parameters.map(p => p.text || p.payload || "");
+           headerParams.forEach((val, i) => {
+               stitchedHeader = stitchedHeader.split(`{{${i+1}}}`).join(val);
+           });
+       }
+
        // Rakit ulang objek parsed dengan data utuh dan cantik
-       parsed.header = realTpl.header_type ? { type: realTpl.header_type, value: realTpl.header_value } : null;
+       parsed.header = realTpl.header_type ? { type: realTpl.header_type, value: stitchedHeader } : null;
        parsed.body = [stitchedBody];
        parsed.footer = realTpl.footer || "";
 
+       // 3. Jahit parameter URL pada BUTTON (Jika Dinamis)
        let dbBtns = [];
        try { dbBtns = JSON.parse(realTpl.buttons_json || realTpl.buttons || "[]"); } catch(e){}
-       parsed.buttons = dbBtns.map(b => {
+       
+       // Tangkap parameter button dari raw payload jika ada
+       const btnComps = raw?.template?.components?.filter(c => c.type === "button") || [];
+
+       parsed.buttons = dbBtns.map((b, index) => {
            if(b.type === "quick_reply") return { type: "quick_reply", value: b.text || b.value };
-           if(b.type === "url") return { type: "url", value: b.value || b.text };
            if(b.type === "phone") return { type: "phone", value: b.value || b.text };
            if(b.type === "flow") return { type: "flow", value: b.text || b.value };
+           
+           if(b.type === "url") {
+               let urlVal = b.value || b.text || "";
+               // Cari apakah ada payload dinamis {{1}} untuk tombol index ini
+               const matchComp = btnComps.find(c => String(c.index) === String(index));
+               if (matchComp && matchComp.parameters && matchComp.parameters[0] && urlVal.includes("{{1}}")) {
+                   let dynText = matchComp.parameters[0].text || matchComp.parameters[0].payload || "";
+                   urlVal = urlVal.replace("{{1}}", dynText); // Replace {{1}} jadi data aslinya
+               }
+               return { type: "url", value: urlVal };
+           }
            return null;
        }).filter(Boolean);
 
