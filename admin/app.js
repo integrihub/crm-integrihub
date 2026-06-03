@@ -1111,92 +1111,88 @@ function renderMessage(m){
  // ================= TEMPLATE (FRONTEND OVERRIDE) =================
   if (m.type === "template") {
     let parsed = {};
-
-    // 1. Coba parse dari backend dulu
     try { parsed = JSON.parse(m.parsed_template || "{}"); } catch(e){}
 
-    // 2. 🔥 FRONTEND OVERRIDE: Jahit ulang template agar 100% muncul Full Body & Footer
-    let tName = m.message; // Backend menyimpan nama template di sini
     let raw = {};
     try { raw = JSON.parse(m.raw_payload || "{}"); } catch(e){}
 
-    if (!tName) tName = raw?.template?.name; 
+    // 🔥 FIX UTAMA: Ekstrak data dari kolom META (Karena sistem Abang nyimpen komponennya di sini!)
+    let metaObj = {};
+    try { metaObj = JSON.parse(m.meta || "{}"); } catch(e){}
 
-    // Cari template utuh dari cache allTemplates
-     const realTpl = allTemplates.find(t => 
+    let tName = m.message;
+    if (!tName) tName = parsed?.name || raw?.template?.name || metaObj?.payload?.content?.template?.name; 
+
+    // Cari template utuh dari cache
+    const realTpl = allTemplates.find(t => 
         String(t.name).toLowerCase().trim() === String(tName).toLowerCase().trim()
     );
 
     if (realTpl) {
-       // 1. Ekstrak Parameter dari Raw Payload
        let rawBodyParams = [];
        let rawHeaderParams = [];
 
-       const bodyComp = raw?.template?.components?.find(c => c.type === "body");
-       const headerComp = raw?.template?.components?.find(c => c.type === "header");
+       // 1. Ambil Komponen (Prioritas dari Meta, lalu raw payload)
+       const components = metaObj?.payload?.content?.template?.components || raw?.template?.components || [];
+       const bodyComp = components.find(c => c.type === "body");
+       const headerComp = components.find(c => c.type === "header");
 
-       // Ambil param body
+       // --- EKSTRAK PARAMETER BODY ---
        if (bodyComp && bodyComp.parameters) {
            rawBodyParams = bodyComp.parameters.map(p => p.text || p.payload || "");
        } else if (parsed.body && Array.isArray(parsed.body)) {
-           rawBodyParams = parsed.body;
+           rawBodyParams = parsed.body; // Dari database parsed_template
        }
 
-       // Ambil param header
+       // --- EKSTRAK PARAMETER HEADER ---
        if (headerComp && headerComp.parameters) {
-           rawHeaderParams = headerComp.parameters.map(p => p.text || p.payload || "");
-       } else if (parsed.header && Array.isArray(parsed.header)) {
-           rawHeaderParams = parsed.header;
+           rawHeaderParams = headerComp.parameters.map(p => p.text || p.document?.link || p.image?.link || p.video?.link || "");
+       } else if (parsed.header && parsed.header.value) {
+           rawHeaderParams = [parsed.header.value]; // Dari database parsed_template (contoh: "BagasDP1")
        } else if (rawBodyParams.length > 0) {
-           // 🔥 FALLBACK OTOMATIS: Jika header param kosong di Payload, pinjam dari Body param pertama
-           rawHeaderParams = [rawBodyParams[0]];
+           rawHeaderParams = [rawBodyParams[0]]; // Fallback terakhir
        }
 
-       // 2. Jahit BODY
+       // 2. JAHIT PARAMETER BODY
        let stitchedBody = realTpl.body_text || realTpl.body || "";
        rawBodyParams.forEach((val, i) => {
            stitchedBody = stitchedBody.split(`{{${i+1}}}`).join(val);
        });
-       // Sapu bersih sisa {{..}} jika jumlah parameter kurang
-       stitchedBody = stitchedBody.replace(/\{\{\d+\}\}/g, "");
+       stitchedBody = stitchedBody.replace(/\{\{\d+\}\}/g, ""); // Sapu bersih sisa {{..}}
 
-       // 3. Jahit HEADER
+       // 3. JAHIT PARAMETER HEADER (Teks Dinamis)
        let stitchedHeader = realTpl.header_value || "";
-       if (realTpl.header_type === "text" && stitchedHeader.includes("{{1}}")) {
+       if (String(realTpl.header_type).toLowerCase() === "text" && stitchedHeader.includes("{{1}}")) {
            rawHeaderParams.forEach((val, i) => {
                stitchedHeader = stitchedHeader.split(`{{${i+1}}}`).join(val);
            });
-           // Sapu bersih sisa {{..}}
-           stitchedHeader = stitchedHeader.replace(/\{\{\d+\}\}/g, "");
+           stitchedHeader = stitchedHeader.replace(/\{\{\d+\}\}/g, ""); // Sapu bersih sisa {{..}}
        }
 
-       // Rakit ulang untuk ditampilkan
+       // Rakit ulang objek
        parsed.header = realTpl.header_type ? { type: realTpl.header_type, value: stitchedHeader } : null;
        parsed.body = [stitchedBody];
        parsed.footer = realTpl.footer || "";
 
-       // 4. Jahit URL BUTTONS
+       // 4. JAHIT PARAMETER BUTTON URL
        let dbBtns = [];
        try { dbBtns = JSON.parse(realTpl.buttons_json || realTpl.buttons || "[]"); } catch(e){}
 
-       const btnComps = raw?.template?.components?.filter(c => c.type === "button") || [];
+       const btnComps = components.filter(c => c.type === "button");
 
        parsed.buttons = dbBtns.map((b, index) => {
            if(b.type === "quick_reply") return { type: "quick_reply", value: b.text || b.value };
            if(b.type === "phone") return { type: "phone", value: b.value || b.text };
            if(b.type === "flow") return { type: "flow", value: b.text || b.value };
-
+           
            if(b.type === "url") {
                let urlVal = b.value || b.text || "";
                const matchComp = btnComps.find(c => String(c.index) === String(index));
 
-               // Jika dinamis lewat payload
                if (matchComp && matchComp.parameters && matchComp.parameters[0] && urlVal.includes("{{1}}")) {
                    let dynText = matchComp.parameters[0].text || matchComp.parameters[0].payload || "";
                    urlVal = urlVal.replace("{{1}}", dynText);
-               } 
-               // 🔥 Fallback URL dinamis jika index tidak dikirim dari API
-               else if (urlVal.includes("{{1}}") && rawBodyParams.length > 0) {
+               } else if (urlVal.includes("{{1}}") && rawBodyParams.length > 0) {
                    urlVal = urlVal.replace("{{1}}", rawBodyParams[0]);
                }
                return { type: "url", value: urlVal };
@@ -1205,8 +1201,8 @@ function renderMessage(m){
        }).filter(Boolean);
 
     } else if (!parsed || Object.keys(parsed).length === 0) {
-       // 3. FALLBACK DARURAT (Jika template dihapus dari database)
-       const components = raw?.template?.components || [];
+       // FALLBACK DARURAT (Jika template dihapus dari database cache)
+       const components = metaObj?.payload?.content?.template?.components || raw?.template?.components || [];
        const headerComp = components.find(c => c.type === "header");
        const bodyComp   = components.find(c => c.type === "body");
        const footerComp = components.find(c => c.type === "footer");
