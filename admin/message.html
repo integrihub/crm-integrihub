@@ -164,6 +164,13 @@ Chatbot Settings
         📢 Aktifkan Mode Quick Blast
       </button>
 
+      <div id="blastSelectAllWrapper" class="hidden mb-3 p-2.5 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg flex justify-between items-center transition-all">
+          <label class="flex items-center cursor-pointer gap-2">
+              <input type="checkbox" id="checkAllBlast" class="w-4 h-4 accent-green-600 rounded" onchange="toggleSelectAllBlast(this.checked)">
+              <span class="text-[13px] font-bold text-green-700 dark:text-green-400">Pilih Semua Kontak di tab ini</span>
+          </label>
+      </div>
+
       <div class="flex gap-2 overflow-x-auto pb-1 text-[11px] font-semibold no-scrollbar">
         <button onclick="setChatFilter('all')" id="tab-all" class="tab-btn px-3 py-1.5 rounded-full bg-green-500 text-white whitespace-nowrap shadow-sm transition">All</button>
         <button onclick="setChatFilter('unassigned')" id="tab-unassigned" class="tab-btn px-3 py-1.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 whitespace-nowrap transition">Unassigned</button>
@@ -264,33 +271,46 @@ Chatbot Settings
             <h2 class="text-xl font-black text-gray-800 dark:text-white">🚀 Quick Blast Setup</h2>
             <button onclick="closeBlastModal()" class="text-gray-400 hover:text-red-500 font-bold text-xl">✕</button>
         </div>
-        <div class="p-6 flex-1 overflow-y-auto">
-            <div class="mb-6">
-                <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">1. Pilih Template Meta (Approved)</label>
-                <select id="blastTemplateSelect" onchange="renderBlastTable()" class="w-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white p-3 rounded-lg font-semibold outline-none focus:border-green-500">
-                    <option value="">-- Pilih Template --</option>
-                </select>
-            </div>
-            <div id="blastInfoAlert" class="mb-4 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 p-3 rounded-lg text-sm border border-blue-200 dark:border-blue-800">
-                Pilih template untuk memuat tabel parameter.
-            </div>
-            <div id="blastTableWrapper" class="hidden overflow-x-auto border dark:border-gray-700 rounded-lg shadow-sm">
-                <table class="w-full text-left text-sm text-gray-600 dark:text-gray-300">
-                    <thead class="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold border-b dark:border-gray-700">
-                        <tr id="blastTableHead"></tr>
-                    </thead>
-                    <tbody id="blastTableBody" class="divide-y dark:divide-gray-700 bg-white dark:bg-gray-900"></tbody>
-                </table>
-            </div>
-            <div id="blastProgressWrapper" class="hidden mt-8">
-                <div class="flex justify-between text-sm font-bold mb-2">
-                    <span class="text-gray-700 dark:text-gray-300">Progres Pengiriman...</span>
-                    <span id="blastProgressText" class="text-green-600">0%</span>
+        <div class="p-6 flex-1 flex flex-col lg:flex-row gap-6 overflow-y-auto">
+            <div class="flex-1 min-w-0">
+                <div class="mb-4">
+                    <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">1. Pilih Template Meta (Approved)</label>
+                    <input type="text" id="searchBlastTemplate" onkeyup="filterBlastTemplates()" placeholder="🔍 Cari nama template..." class="w-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white p-2 mb-2 rounded-lg text-sm font-medium outline-none focus:border-green-500 transition">
+                    
+                    <select id="blastTemplateSelect" onchange="renderBlastTable()" class="w-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white p-3 rounded-lg font-semibold outline-none focus:border-green-500">
+                        <option value="">-- Pilih Template --</option>
+                    </select>
                 </div>
-                <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
-                    <div id="blastProgressBar" class="bg-green-500 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+                
+                <div id="blastInfoAlert" class="mb-4 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 p-3 rounded-lg text-sm border border-blue-200 dark:border-blue-800">
+                    Pilih template untuk memuat tabel parameter.
                 </div>
-                <p class="text-xs text-gray-500 mt-2 text-center">Anda dapat menutup jendela ini, sistem akan melanjutkan pengiriman di background server.</p>
+                
+                <div id="blastTableWrapper" class="hidden overflow-x-auto border dark:border-gray-700 rounded-lg shadow-sm">
+                    <table class="w-full text-left text-sm text-gray-600 dark:text-gray-300">
+                        <thead class="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold border-b dark:border-gray-700">
+                            <tr id="blastTableHead"></tr>
+                        </thead>
+                        <tbody id="blastTableBody" class="divide-y dark:divide-gray-700 bg-white dark:bg-gray-900"></tbody>
+                    </table>
+                </div>
+
+                <div id="blastProgressWrapper" class="hidden mt-8">
+                    <div class="flex justify-between text-sm font-bold mb-2">
+                        <span class="text-gray-700 dark:text-gray-300">Progres Pengiriman...</span>
+                        <span id="blastProgressText" class="text-green-600">0%</span>
+                    </div>
+                    <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+                        <div id="blastProgressBar" class="bg-green-500 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2 text-center">Sistem akan memproses di background, Anda boleh menutup jendela ini.</p>
+                </div>
+            </div>
+
+            <div id="blastPreviewCol" class="hidden lg:block w-[320px] flex-none border-l dark:border-gray-700 pl-6">
+                <h3 class="font-bold text-sm text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">📱 Tampilan di WhatsApp</h3>
+                <div id="blastTemplatePreviewBox" class="bg-[url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png')] bg-cover p-3 rounded-xl shadow-inner min-h-[300px]">
+                    </div>
             </div>
         </div>
         <div class="px-6 py-4 border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex justify-end gap-3">
