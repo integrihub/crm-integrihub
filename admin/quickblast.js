@@ -1,7 +1,7 @@
 // ================= STATE QUICK BLAST =================
 let isBlastMode = false;
 let selectedBlast = []; 
-let currentBlastConfig = { reqHeaderText: false, reqMedia: false, bodyParamsCount: 0, reqButton: false };
+let currentBlastConfig = { reqHeaderText: false, reqMedia: false, bodyParamsCount: 0, dynamicButtons: [] };
 
 function toggleBlastMode() {
     isBlastMode = !isBlastMode;
@@ -28,11 +28,9 @@ function toggleBlastMode() {
     if(typeof renderChatListUI === "function") renderChatListUI(); 
 }
 
-// 🔥 FUNGSI BARU: SELECT ALL SESUAI FILTER
 function toggleSelectAllBlast(isChecked) {
     let list = Object.values(processedChatMap);
     
-    // Logika filter (disamakan dengan app.js)
     list = list.filter(c => {
         if (activeChatFilter === 'resolved') return c.is_closed;
         if (c.is_closed) return false; 
@@ -54,7 +52,6 @@ function toggleSelectAllBlast(isChecked) {
         });
     }
 
-    // Eksekusi Check/Uncheck
     list.forEach(c => {
         if (isChecked) {
             if (!selectedBlast.some(x => x.number === c.number)) selectedBlast.push({ number: c.number, name: c.name });
@@ -63,7 +60,7 @@ function toggleSelectAllBlast(isChecked) {
         }
     });
 
-    handleSelectBlast(null, null, null); // Paksa trigger UI floating panel
+    handleSelectBlast(null, null, null); 
     if(typeof renderChatListUI === "function") renderChatListUI();
 }
 
@@ -73,7 +70,7 @@ function handleSelectBlast(num, name, isChecked) {
             if (!selectedBlast.some(x => x.number === num)) selectedBlast.push({ number: num, name: name });
         } else {
             selectedBlast = selectedBlast.filter(x => x.number !== num);
-            document.getElementById("checkAllBlast").checked = false; // Lepas centang select all jika ada 1 yg di-uncheck
+            document.getElementById("checkAllBlast").checked = false; 
         }
     }
     
@@ -120,7 +117,6 @@ function closeBlastModal() {
     setTimeout(() => modal.classList.add("hidden"), 300);
 }
 
-// 🔥 FUNGSI BARU: SEARCH TEMPLATE DI DROPDOWN
 function filterBlastTemplates() {
     const query = document.getElementById("searchBlastTemplate").value.toLowerCase();
     const select = document.getElementById("blastTemplateSelect");
@@ -136,13 +132,12 @@ function filterBlastTemplates() {
             options[i].style.display = "none";
         }
     }
-    // Auto select jika hanya sisa 1 hasil (UX Enhancement)
     if(hasResult && query !== "") {
         select.value = ""; 
     }
 }
 
-// 🔥 FUNGSI REVISI BESAR: DETEKSI SEMUA PARAMETER DAN RENDER PREVIEW
+// 🔥 FIX BUG 1 & 2: DETEKSI SEMUA MULTI CTA
 function renderBlastTable() {
     const tplId = document.getElementById("blastTemplateSelect").value;
     if (!tplId) {
@@ -159,18 +154,14 @@ function renderBlastTable() {
     document.getElementById("btnSendBlast").classList.remove("hidden");
     document.getElementById("blastPreviewCol").classList.remove("hidden");
 
-    // Tampilkan Preview Template (Menggunakan UI renderTemplatePreview dari app.js)
     if(typeof renderTemplatePreview === "function") {
-        const previewTargetOriginal = document.getElementById("previewBox");
-        // Kita timpa ID sementara agar fungsi renderTemplatePreview nulis ke dalam modal blast
         const blastPreviewBox = document.getElementById("blastTemplatePreviewBox");
         blastPreviewBox.id = "previewBox"; 
         renderTemplatePreview(tpl, "modal");
-        blastPreviewBox.id = "blastTemplatePreviewBox"; // Kembalikan ID-nya
+        blastPreviewBox.id = "blastTemplatePreviewBox"; 
     }
 
-    // --- ANALISA KEBUTUHAN PARAMETER TEMPLATE ---
-    currentBlastConfig = { reqHeaderText: false, reqMedia: false, bodyParamsCount: 0, reqButton: false };
+    currentBlastConfig = { reqHeaderText: false, reqMedia: false, bodyParamsCount: 0, dynamicButtons: [] };
     
     // 1. Cek Header
     if (tpl.header_type === 'text' && (tpl.header_value || "").includes("{{1}}")) {
@@ -184,26 +175,30 @@ function renderBlastTable() {
     const matchParams = bodyStr.match(/\{\{\d+\}\}/g) || [];
     currentBlastConfig.bodyParamsCount = new Set(matchParams).size;
 
-    // 3. Cek Button URL Dynamic
+    // 3. Cek MULTI Button URL Dynamic
     let dbBtns = [];
     try { dbBtns = JSON.parse(tpl.buttons_json || tpl.buttons || "[]"); } catch(e){}
-    if (dbBtns.some(b => b.type === "url" && (b.value || b.url || "").includes("{{1}}"))) {
-        currentBlastConfig.reqButton = true;
-    }
+    dbBtns.forEach((b, idx) => {
+        if (b.type === "url" && (b.value || b.url || "").includes("{{1}}")) {
+            currentBlastConfig.dynamicButtons.push({ index: idx, text: b.text || "Visit Website" });
+        }
+    });
 
-    // --- RAKIT TABEL ---
+    // --- RAKIT HEADER TABEL ---
     let thHTML = `<th class="p-3 whitespace-nowrap w-[50px]">No</th>
                   <th class="p-3 whitespace-nowrap min-w-[150px]">Nama Kontak</th>`;
                   
-    // Header Kolom
     if (currentBlastConfig.reqMedia) thHTML += createColHeader('media_url', '🔗 Media/Doc URL');
     if (currentBlastConfig.reqHeaderText) thHTML += createColHeader('header_text', '📝 Header {{1}}');
     for (let i = 1; i <= currentBlastConfig.bodyParamsCount; i++) {
         thHTML += createColHeader(`body_${i}`, `💬 Body {{${i}}}`);
     }
-    if (currentBlastConfig.reqButton) thHTML += createColHeader('button_cta', '🌐 URL CTA {{1}}');
+    // Buat kolom untuk tiap tombol CTA dinamis
+    currentBlastConfig.dynamicButtons.forEach((btn) => {
+        thHTML += createColHeader(`button_cta_${btn.index}`, `🌐 CTA: ${btn.text}`);
+    });
 
-    // Body Kolom
+    // --- RAKIT BODY TABEL ---
     let trHTML = selectedBlast.map((u, rowIndex) => {
         let tdHTML = `<td class="p-3 border-r dark:border-gray-700 font-mono text-xs text-gray-400">${rowIndex + 1}</td>
                       <td class="p-3 border-r dark:border-gray-700 font-semibold text-sm">
@@ -220,9 +215,9 @@ function renderBlastTable() {
             let defaultVal = (i === 1) ? u.name : ""; 
             tdHTML += createInputCell(rowIndex, `body_${i}`, defaultVal, `Body {{${i}}}...`);
         }
-        if (currentBlastConfig.reqButton) {
-            tdHTML += createInputCell(rowIndex, 'button_cta', "", "Akhiran Link...");
-        }
+        currentBlastConfig.dynamicButtons.forEach((btn) => {
+            tdHTML += createInputCell(rowIndex, `button_cta_${btn.index}`, "", `Akhiran URL CTA...`);
+        });
 
         return `<tr class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition">${tdHTML}</tr>`;
     }).join('');
@@ -253,20 +248,27 @@ function applyBlastParamToAll(key) {
     for (let i = 1; i < selectedBlast.length; i++) {
         document.getElementById(`blast_${key}_${i}`).value = firstVal;
     }
-    if(typeof showModernAlert === "function") showModernAlert("Sukses", `Kolom ${key} berhasil diterapkan ke semua kontak!`, "success");
+    if(typeof showModernAlert === "function") showModernAlert("Sukses", `Kolom disalin ke semua kontak!`, "success");
 }
 
 async function executeQuickBlast() {
     const tplId = document.getElementById("blastTemplateSelect").value;
-    if (!tplId) return alert("Pilih template terlebih dahulu!");
+    if (!tplId) return typeof showModernAlert === "function" ? showModernAlert("Error", "Pilih template terlebih dahulu!", "error") : alert("Pilih template!");
 
-    // Susun Payload Dinamis
     const blastPayload = selectedBlast.map((u, rowIndex) => {
         let payload = { number: u.number, name: u.name };
         
         if (currentBlastConfig.reqMedia) payload.media_url = document.getElementById(`blast_media_url_${rowIndex}`).value;
         if (currentBlastConfig.reqHeaderText) payload.header_param = document.getElementById(`blast_header_text_${rowIndex}`).value;
-        if (currentBlastConfig.reqButton) payload.button_param = document.getElementById(`blast_button_cta_${rowIndex}`).value;
+        
+        // Pengepakan Object parameter multi CTA
+        if (currentBlastConfig.dynamicButtons.length > 0) {
+            let bParams = {};
+            currentBlastConfig.dynamicButtons.forEach((btn) => {
+                bParams[btn.index] = document.getElementById(`blast_button_cta_${btn.index}_${rowIndex}`).value;
+            });
+            payload.button_params = bParams;
+        }
         
         let bodyParams = [];
         for (let i = 1; i <= currentBlastConfig.bodyParamsCount; i++) {
