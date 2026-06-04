@@ -843,23 +843,29 @@ function renderChatListUI() {
 
       // 🔥 LOGIKA ICON STATUS SINKRON
       let listStatusIcon = "";
-      
-      // Hanya munculkan icon centang/silang jika pesan terakhir kita yang kirim (is_last_out)
       if (c.is_last_out) {
-          if (c.last_status === "failed") {
-              listStatusIcon = `<span class="text-red-500 text-[11px]">❌</span>`;
-          } else if (c.last_status === "read") {
-              listStatusIcon = `<span class="text-[#53bdeb] text-[11px] font-bold">✓✓</span>`;
-          } else if (c.last_status === "delivered") {
-              listStatusIcon = `<span class="text-gray-400 text-[11px]">✓✓</span>`;
-          } else {
-              // Default untuk sent atau pending
-              listStatusIcon = `<span class="text-gray-400 text-[11px]">✓</span>`;
-          }
+          if (c.last_status === "failed") listStatusIcon = `<span class="text-red-500 text-[11px]">❌</span>`;
+          else if (c.last_status === "read") listStatusIcon = `<span class="text-[#53bdeb] text-[11px] font-bold">✓✓</span>`;
+          else if (c.last_status === "delivered") listStatusIcon = `<span class="text-gray-400 text-[11px]">✓✓</span>`;
+          else listStatusIcon = `<span class="text-gray-400 text-[11px]">✓</span>`;
       }
 
+      // 🔥 LOGIKA CHECKBOX BLAST (TERHUBUNG KE quickblast.js)
+      const isChecked = typeof selectedBlast !== "undefined" && selectedBlast.some(x => x.number === c.number) ? 'checked' : '';
+      const blastCheckbox = (typeof isBlastMode !== "undefined" && isBlastMode)
+        ? `<div class="mr-3 flex items-center h-full" onclick="event.stopPropagation()">
+             <input type="checkbox" class="w-5 h-5 cursor-pointer accent-green-600 rounded" 
+                    onchange="handleSelectBlast('${c.number}', '${c.name.replace(/'/g, "\\'")}', this.checked)" ${isChecked}>
+           </div>` 
+        : '';
+
+      const clickAction = (typeof isBlastMode !== "undefined" && isBlastMode)
+        ? `handleSelectBlast('${c.number}', '${c.name.replace(/'/g, "\\'")}', !${isChecked ? 'true' : 'false'})` 
+        : `openChat('${c.number}','${c.name.replace(/'/g, "\\'")}')`;
+
       return `
-      <div onclick="openChat('${c.number}','${c.name}')" class="p-3 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition flex items-center gap-3">
+      <div onclick="${clickAction}" class="p-3 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition flex items-center gap-3 ${isChecked ? 'bg-green-50 dark:bg-green-900/20' : ''}">
+        ${blastCheckbox}
         <div class="relative flex-shrink-0">
           <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(c.name)}&background=random&color=fff" class="w-11 h-11 rounded-full object-cover shadow-sm">
           <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" class="w-4 h-4 absolute bottom-0 right-0 bg-white rounded-full border border-white">
