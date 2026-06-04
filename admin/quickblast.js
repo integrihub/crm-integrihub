@@ -162,29 +162,75 @@ async function executeQuickBlast() {
     document.getElementById("btnSendBlast").disabled = true;
     document.getElementById("blastTableWrapper").classList.add("opacity-50", "pointer-events-none");
     document.getElementById("blastProgressWrapper").classList.remove("hidden");
-    document.getElementById("blastProgressBar").style.width = "10%";
-    document.getElementById("blastProgressText").innerText = "Menginisialisasi Antrean...";
+    document.getElementById("blastProgressBar").style.width = "50%";
+    document.getElementById("blastProgressText").innerText = "Mengirim ke server...";
 
     try {
-        // Simulasi Background Processing UI (Hapus & Ganti dengan Fetch kalau API Backend udah ready)
-        let percent = 10;
-        const interval = setInterval(() => {
-            percent += 20;
-            document.getElementById("blastProgressBar").style.width = percent + "%";
-            document.getElementById("blastProgressText").innerText = percent + "%";
-            if(percent >= 100) {
-                clearInterval(interval);
-                if(typeof showModernAlert === "function") showModernAlert("Blast Dijalankan!", "Sistem sedang mengirim pesan di background.", "success");
-                setTimeout(() => {
-                    closeBlastModal();
-                    toggleBlastMode();
-                }, 2000);
+        // 🔥 LOGIKA API URL DINAMIS (TANPA HARDCODE) 🔥
+        let API_URL = "https://api-crm.integrihub.my.id"; // Default Production
+        
+        // Cek jika Abang sudah punya variabel global API di app.js
+        if (typeof BASE_URL !== "undefined") {
+            API_URL = BASE_URL;
+        } else if (typeof API_BASE_URL !== "undefined") {
+            API_URL = API_BASE_URL;
+        } 
+        // Jika tidak ada, deteksi otomatis dari URL Browser saat ini
+        else {
+            const hostname = window.location.hostname;
+            if (hostname.includes("staging")) {
+                API_URL = "https://api-staging.crm.integrihub.my.id";
+            } else if (hostname.includes("localhost") || hostname.includes("127.0.0.1")) {
+                API_URL = "http://localhost:8787"; // Port default wrangler dev (lokal)
             }
-        }, 800);
+        }
+
+        const endpoint = `${API_URL}/api/blast`;
+        console.log("🎯 Membidik URL Endpoint:", endpoint);
+
+        // 🔥 TEMBAK FETCH ASLI KE CLOUDFLARE WORKERS 🔥
+        const response = await fetch(endpoint, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "client-id": finalJSON.client_id
+            },
+            body: JSON.stringify(finalJSON)
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            // Sukses masuk Queues Server
+            document.getElementById("blastProgressBar").style.width = "100%";
+            document.getElementById("blastProgressText").innerText = "100% - Sukses Masuk Antrean!";
+            
+            if (typeof showModernAlert === "function") {
+                showModernAlert("Blast Dijalankan!", "Sistem sedang mengirim pesan di background server.", "success");
+            } else {
+                alert("🚀 Sukses! Pesan sedang dikirim di background server.");
+            }
+
+            // Tutup modal otomatis setelah 2 detik
+            setTimeout(() => {
+                closeBlastModal();
+                toggleBlastMode();
+            }, 2000);
+        } else {
+            throw new Error(result.error || "Gagal mengirim blast");
+        }
 
     } catch (error) {
-        if(typeof showModernAlert === "function") showModernAlert("Gagal", "Gagal menghubungi server.", "error");
+        console.error("BLAST ERROR:", error);
+        if (typeof showModernAlert === "function") {
+            showModernAlert("Gagal", "Terjadi kesalahan: " + error.message, "error");
+        } else {
+            alert("Terjadi kesalahan: " + error.message);
+        }
+        
+        // Kembalikan UI seperti semula jika error, agar bisa dicoba lagi
         document.getElementById("btnSendBlast").disabled = false;
         document.getElementById("blastTableWrapper").classList.remove("opacity-50", "pointer-events-none");
+        document.getElementById("blastProgressWrapper").classList.add("hidden");
     }
 }
