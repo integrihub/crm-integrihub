@@ -16,16 +16,59 @@
 
 <div class="flex flex-col md:flex-row min-h-screen">
 
-  <div class="w-full md:w-64 bg-white dark:bg-gray-800 p-4 shadow-md">
-    <h2 class="text-xl font-bold dark:text-white mb-4">Super Admin</h2>
+  <div class="w-full md:w-64 md:sticky md:top-0 md:h-screen overflow-y-auto bg-white dark:bg-gray-800 p-4 border-r border-gray-200 dark:border-gray-700 flex md:flex-col justify-between transition-colors z-20">
+    <div>
+      <h2 class="text-xl font-bold text-gray-800 dark:text-white mb-8 flex items-center gap-2">
+        <svg class="w-7 h-7 text-blue-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+        Super Admin
+      </h2>
 
-    <ul class="space-y-2 text-gray-700 dark:text-gray-200">
-      <li><button onclick="location.href='home.html'" class="w-full text-left p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700">Home</button></li>
-      <li><button onclick="location.href='create-client.html'" class="w-full text-left p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700">Create Client</button></li>
-      <li><button onclick="location.href='list-client.html'" class="w-full text-left p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700">List Client</button></li>
-      <li><button onclick="location.href='template.html'" class="w-full text-left p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700">Template Management</button></li>
-      <li><button class="w-full text-left p-2 rounded bg-gray-200 dark:bg-gray-700 font-semibold">Audit Trail Logs</button></li>
-    </ul>
+      <p class="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3 px-2">
+        Menu Utama
+      </p>
+
+      <ul class="space-y-1">
+        <li>
+          <button onclick="location.href='home.html'"
+            class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white font-medium text-sm whitespace-nowrap transition-colors">
+            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+            Home
+          </button>
+        </li>
+
+        <li>
+          <button onclick="location.href='create-client.html'"
+            class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white font-medium text-sm whitespace-nowrap transition-colors">
+            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
+            Create Client
+          </button>
+        </li>
+
+        <li>
+          <button onclick="location.href='list-client.html'"
+            class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white font-medium text-sm whitespace-nowrap transition-colors">
+            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+            List Client
+          </button>
+        </li>
+        
+        <li>
+          <button onclick="location.href='template.html'" 
+            class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white font-medium text-sm whitespace-nowrap transition-colors">
+            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"></path></svg>
+            Template Management
+          </button>
+        </li>
+
+        <li>
+          <button onclick="location.href='audit-logs.html'" 
+            class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-semibold text-sm whitespace-nowrap transition-colors">
+            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+            Audit Trail Logs
+          </button>
+        </li>
+      </ul>
+    </div>
   </div>
 
   <div class="flex-1 p-4 md:p-6 overflow-hidden">
@@ -160,7 +203,7 @@
 </div>
 
 <div class="fixed bottom-3 left-4 text-[11px] text-gray-400 dark:text-gray-300 bg-white/80 dark:bg-gray-800/80 backdrop-blur px-3 py-1 rounded-lg shadow z-40">
-  2026 © Application developed by IntegriHub-Bagas v1.0.0
+2026 © IntegriHub v1.0.0
 </div>
 
 <script src="superadmin-app.js"></script>
