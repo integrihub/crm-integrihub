@@ -1172,50 +1172,96 @@ function renderMessage(m){
   }
 
   // ================= 1. BLOK TEMPLATE =================
-  // 🔥 FIX: Hanya deteksi "template", JANGAN masukkan "interactive" di sini
   if (m.type === "template") {
     let parsed = {};
     try { parsed = JSON.parse(m.parsed_template || "{}"); } catch(e){}
 
-    let tName = m.message;
     let raw = {};
     try { raw = JSON.parse(m.raw_payload || "{}"); } catch(e){}
-    if (!tName) tName = raw?.template?.name;
+
+    // 🔥 FIX 1 & 2: Ekstrak data murni dari kolom META mencegah body double & menangkap parameter header
+    let metaObj = {};
+    try { metaObj = JSON.parse(m.meta || "{}"); } catch(e){}
+
+    let tName = m.message;
+    if (!tName) tName = parsed?.name || raw?.template?.name || metaObj?.payload?.content?.template?.name;
 
     const realTpl = allTemplates.find(t =>
         String(t.name).toLowerCase().trim() === String(tName).toLowerCase().trim()
     );
 
     if (realTpl) {
-       let paramsArr = [];
-       const bodyComp = raw?.template?.components?.find(c => c.type === "body");
+       let rawBodyParams = [];
+       let rawHeaderParams = [];
+
+       const components = metaObj?.payload?.content?.template?.components || raw?.template?.components || [];
+       const bodyComp = components.find(c => c.type === "body");
+       const headerComp = components.find(c => c.type === "header");
+
+       // --- EKSTRAK PARAMETER BODY ---
        if (bodyComp && bodyComp.parameters) {
-           paramsArr = bodyComp.parameters.map(p => p.text || p.payload || "");
+           rawBodyParams = bodyComp.parameters.map(p => p.text || p.payload || "");
        } else if (parsed.body && Array.isArray(parsed.body)) {
-           paramsArr = parsed.body;
+           rawBodyParams = parsed.body;
        }
 
+       // --- EKSTRAK PARAMETER HEADER ---
+       if (headerComp && headerComp.parameters) {
+           rawHeaderParams = headerComp.parameters.map(p => p.text || p.document?.link || p.image?.link || p.video?.link || "");
+       } else if (parsed.header && parsed.header.value) {
+           rawHeaderParams = [parsed.header.value];
+       } else if (rawBodyParams.length > 0) {
+           rawHeaderParams = [rawBodyParams[0]]; // Fallback terakhir
+       }
+
+       // 2. JAHIT PARAMETER BODY
        let stitchedBody = realTpl.body_text || realTpl.body || "";
-       paramsArr.forEach((val, i) => {
+       rawBodyParams.forEach((val, i) => {
            stitchedBody = stitchedBody.split(`{{${i+1}}}`).join(val);
        });
+       stitchedBody = stitchedBody.replace(/\{\{\d+\}\}/g, ""); // Sapu bersih sisa {{..}}
 
-       parsed.header = realTpl.header_type ? { type: realTpl.header_type, value: realTpl.header_value } : null;
+       // 3. JAHIT PARAMETER HEADER (Teks Dinamis)
+       let stitchedHeader = realTpl.header_value || "";
+       if (String(realTpl.header_type).toLowerCase() === "text" && stitchedHeader.includes("{{1}}")) {
+           rawHeaderParams.forEach((val, i) => {
+               stitchedHeader = stitchedHeader.split(`{{${i+1}}}`).join(val);
+           });
+           stitchedHeader = stitchedHeader.replace(/\{\{\d+\}\}/g, ""); // Sapu bersih sisa {{..}}
+       }
+
+       parsed.header = realTpl.header_type ? { type: realTpl.header_type, value: stitchedHeader } : null;
        parsed.body = [stitchedBody];
        parsed.footer = realTpl.footer || "";
 
+       // 4. JAHIT PARAMETER BUTTON URL (FIX 3: CTA DYNAMIC URL)
        let dbBtns = [];
        try { dbBtns = JSON.parse(realTpl.buttons_json || realTpl.buttons || "[]"); } catch(e){}
-       parsed.buttons = dbBtns.map(b => {
+
+       const btnComps = components.filter(c => c.type === "button");
+
+       parsed.buttons = dbBtns.map((b, index) => {
            if(b.type === "quick_reply") return { type: "quick_reply", value: b.text || b.value };
-           if(b.type === "url") return { type: "url", value: b.value || b.text };
            if(b.type === "phone") return { type: "phone", value: b.value || b.text };
            if(b.type === "flow") return { type: "flow", value: b.text || b.value };
+           
+           if(b.type === "url") {
+               let urlVal = b.value || b.text || "";
+               const matchComp = btnComps.find(c => String(c.index) === String(index));
+
+               if (matchComp && matchComp.parameters && matchComp.parameters[0] && urlVal.includes("{{1}}")) {
+                   let dynText = matchComp.parameters[0].text || matchComp.parameters[0].payload || "";
+                   urlVal = urlVal.replace("{{1}}", dynText);
+               } else if (urlVal.includes("{{1}}") && rawBodyParams.length > 0) {
+                   urlVal = urlVal.replace("{{1}}", rawBodyParams[0]);
+               }
+               return { type: "url", value: urlVal };
+           }
            return null;
        }).filter(Boolean);
 
     } else if (!parsed || Object.keys(parsed).length === 0) {
-       const components = raw?.template?.components || [];
+       const components = metaObj?.payload?.content?.template?.components || raw?.template?.components || [];
        const headerComp = components.find(c => c.type === "header");
        const bodyComp   = components.find(c => c.type === "body");
        const footerComp = components.find(c => c.type === "footer");
