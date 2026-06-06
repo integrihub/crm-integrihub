@@ -25,8 +25,9 @@ async function set_loadData() {
   if (!SET_CID) return;
 
   try {
-    // 🔥 TAMBAH { cache: "no-cache" } di sini supaya selalu ambil data baru dari database
-    const res = await fetch(`${SET_API}/client-info?client_id=${SET_CID}`, { 
+    // 🔥 TAMBAH &t=${Date.now()} untuk membuat URL unik tiap kali dipanggil
+    // Ini adalah teknik 'Cache Busting' agar Backend Worker Abang tidak membaca data lama di KV
+    const res = await fetch(`${SET_API}/client-info?client_id=${SET_CID}&t=${Date.now()}`, { 
         cache: "no-cache" 
     });
     
