@@ -169,6 +169,37 @@
       </div>
 
       <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+        <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4 border-b border-gray-100 dark:border-gray-700 pb-2">Billing & Pricing Configuration</h3>
+        
+        <div class="mb-5">
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tipe Tagihan (Billing Type)</label>
+          <select id="billing_type" class="w-full md:w-1/2 p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-shadow">
+            <option value="prepaid">Prepaid (Prabayar / Potong Saldo Token)</option>
+            <option value="postpaid">Postpaid (Pascabayar / Tagihan Akhir Bulan)</option>
+          </select>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div>
+            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Harga Marketing</label>
+            <input id="price_marketing" type="number" value="500" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Harga Utility</label>
+            <input id="price_utility" type="number" value="300" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Harga Authentication</label>
+            <input id="price_authentication" type="number" value="550" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Harga Service (24 Jam)</label>
+            <input id="price_service" type="number" value="350" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
         <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4 border-b border-gray-100 dark:border-gray-700 pb-2">Admin Credentials & Agents</h3>
         
         <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">

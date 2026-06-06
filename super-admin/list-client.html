@@ -139,10 +139,10 @@
     <table class="w-full bg-white dark:bg-gray-800 shadow rounded overflow-hidden">
       <thead class="bg-gray-200 dark:bg-gray-700 text-left">
         <tr>
-          <th class="p-3 w-16">ID</th>
+          <th class="p-3 w-16">Client ID</th>
           <th class="p-3">Name</th>
           <th class="p-3">Sender</th>
-          <th class="p-3 text-red-500 font-semibold whitespace-nowrap">Created At</th>
+          <th class="p-3 text-green-600 dark:text-green-400 font-bold">Sisa Token</th> <th class="p-3 text-red-500 font-semibold whitespace-nowrap">Created At</th>
           <th class="p-3 text-red-500 font-semibold whitespace-nowrap">Updated At</th>
           <th class="p-3 w-20 text-center">Logo</th>
           <th class="p-3 w-[300px] text-center">Action</th>
@@ -263,9 +263,34 @@
     </p>
   </div>
 
-</div>
-
-    <button onclick="saveEdit()" class="bg-blue-500 text-white px-3 py-1 rounded w-full">Save</button>
+  <hr class="my-3">
+  <div>
+    <label class="text-sm font-medium">Tipe Tagihan</label>
+    <select id="edit_billing_type" class="w-full p-2 border rounded mt-1">
+      <option value="prepaid">Prepaid</option>
+      <option value="postpaid">Postpaid</option>
+    </select>
+  </div>
+  <div class="grid grid-cols-2 gap-2 mt-2">
+    <div>
+      <label class="text-xs font-medium">Harga Marketing</label>
+      <input id="edit_price_marketing" type="number" class="w-full p-2 border rounded mt-1">
+    </div>
+    <div>
+      <label class="text-xs font-medium">Harga Utility</label>
+      <input id="edit_price_utility" type="number" class="w-full p-2 border rounded mt-1">
+    </div>
+    <div>
+      <label class="text-xs font-medium">Harga Auth</label>
+      <input id="edit_price_auth" type="number" class="w-full p-2 border rounded mt-1">
+    </div>
+    <div>
+      <label class="text-xs font-medium">Harga Service</label>
+      <input id="edit_price_service" type="number" class="w-full p-2 border rounded mt-1">
+    </div>
+  </div>
+  <hr class="my-3">
+  </div> <button onclick="saveEdit()" class="bg-blue-500 text-white px-3 py-1 rounded w-full">Save</button>
     <button onclick="closeEdit()" class="bg-gray-400 text-white px-3 py-1 rounded w-full">Cancel</button>
   </div>
 </div>
@@ -285,12 +310,32 @@
   </div>
 </div>
 
+<div id="topupModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+  <div class="bg-white p-6 rounded-lg w-[400px] space-y-4">
+    <h2 class="text-xl font-bold text-gray-800">💳 Top Up Token</h2>
+    <p class="text-sm text-gray-600">Tambah saldo token untuk <span id="topupClientName" class="font-bold"></span></p>
+
+    <div>
+      <label class="text-sm font-medium">Nominal Token</label>
+      <input id="topupAmount" type="number" placeholder="Contoh: 500000" class="w-full p-2 border rounded mt-1 text-lg font-semibold text-green-600">
+    </div>
+    
+    <div>
+      <label class="text-sm font-medium">Keterangan (Opsional)</label>
+      <input id="topupDesc" type="text" placeholder="Transfer BCA an Budi..." class="w-full p-2 border rounded mt-1">
+    </div>
+
+    <div class="flex justify-end gap-2 mt-4">
+      <button onclick="closeTopUpModal()" class="bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded">Batal</button>
+      <button id="btnSubmitTopUp" onclick="submitTopUp()" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded font-bold">Top Up Sekarang</button>
+    </div>
+  </div>
+</div>
 </div>
 </div>
 
-<!-- FOOTER -->
 <div class="fixed bottom-3 left-4 text-[11px] text-gray-400 dark:text-gray-300 bg-white/80 dark:bg-gray-800/80 backdrop-blur px-3 py-1 rounded-lg shadow z-40">
-2026 © IntegriHub v1.0.0
+  2026 © IntegriHub v1.0.0
 </div>
 
 

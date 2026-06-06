@@ -74,15 +74,15 @@ async function createClient(){
   });
 
   const payload = {
-    name,
-    sender,
-    bearer_token: token,
-    logo_url: logo,
-    primary_color: color,
-    admin_email,
-    admin_pass,
-    agents, // ✅ INI KUNCI FIX
-    actor_email: localStorage.getItem("email") // 🔥 TAMBAHKAN BARIS INI
+    name, sender, bearer_token: token, logo_url: logo, primary_color: color, admin_email, admin_pass,
+    agents, 
+    actor_email: localStorage.getItem("email"),
+    // 🔥 TAMBAHAN BILLING
+    billing_type: document.getElementById("billing_type")?.value || "prepaid",
+    price_marketing: parseInt(document.getElementById("price_marketing")?.value || 880),
+    price_utility: parseInt(document.getElementById("price_utility")?.value || 600),
+    price_authentication: parseInt(document.getElementById("price_authentication")?.value || 600),
+    price_service: parseInt(document.getElementById("price_service")?.value || 350)
   };
 
   console.log("PAYLOAD:", payload);
@@ -139,6 +139,65 @@ async function loadClients(){
   }
 }
 
+// ================= TOP UP SALDO =================
+let topupClientId = null;
+
+function openTopUpModal(id, name) {
+  topupClientId = id;
+  document.getElementById("topupClientName").innerText = name;
+  document.getElementById("topupAmount").value = "";
+  document.getElementById("topupDesc").value = "";
+  document.getElementById("topupModal").classList.remove("hidden");
+}
+
+function closeTopUpModal() {
+  document.getElementById("topupModal").classList.add("hidden");
+}
+
+async function submitTopUp() {
+  const amount = parseInt(document.getElementById("topupAmount").value);
+  const desc = document.getElementById("topupDesc").value;
+  const btn = document.getElementById("btnSubmitTopUp");
+
+  if (!amount || amount <= 0) {
+    alert("Masukkan nominal token yang valid!");
+    return;
+  }
+
+  if (!confirm(`Yakin ingin Top Up ${amount.toLocaleString('id-ID')} token ke client ini?`)) return;
+
+  btn.innerText = "Processing...";
+  btn.disabled = true;
+
+  try {
+    const res = await fetch(API + "/admin/topup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        client_id: topupClientId,
+        amount: amount,
+        description: desc
+      })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert("Gagal Top Up: " + (data.error || "Unknown Error"));
+    } else {
+      alert("✅ Top Up Berhasil!");
+      closeTopUpModal();
+      loadClients(); // Reload tabel biar saldo terupdate
+    }
+  } catch (err) {
+    console.error("Top Up Error:", err);
+    alert("Gagal terhubung ke server.");
+  } finally {
+    btn.innerText = "Top Up Sekarang";
+    btn.disabled = false;
+  }
+}
+
 // ================= RENDER TABLE =================
 function renderTable(data){
 
@@ -189,16 +248,16 @@ function renderTable(data){
       <td class="p-3 font-semibold">${c.id}</td>
       <td class="p-3">${c.name}</td>
       <td class="p-3">${c.sender}</td>
-      <td class="p-3 text-sm text-gray-600 dark:text-gray-400">${formatWIB(c.created_at)}</td>
+      <td class="p-3 text-green-600 font-bold">${c.billing_type === 'postpaid' ? 'Postpaid' : (c.balance || 0).toLocaleString('id-ID')}</td> <td class="p-3 text-sm text-gray-600 dark:text-gray-400">${formatWIB(c.created_at)}</td>
       <td class="p-3 text-sm text-gray-600 dark:text-gray-400">${formatWIB(c.update_at)}</td>
       <td class="p-3 text-center">
         ${c.logo_url ? `<img src="${c.logo_url}" class="h-8 mx-auto cursor-pointer" onclick="window.open('${c.logo_url}')">` : "-"}
       </td>
       <td class="p-3 text-center space-x-1">
-        <button onclick="detailClient(${c.id})" class="bg-blue-500 text-white px-2 py-1 rounded">Detail</button>
+        <button onclick="openTopUpModal(${c.id}, '${c.name.replace(/'/g, "\\'")}')" class="bg-green-600 text-white px-2 py-1 rounded">💳 Top Up</button> <button onclick="detailClient(${c.id})" class="bg-blue-500 text-white px-2 py-1 rounded">Detail</button>
         <button onclick="editClient(${c.id})" class="bg-yellow-500 text-white px-2 py-1 rounded">Edit</button>
         <button onclick="deleteClient(${c.id})" class="bg-red-500 text-white px-2 py-1 rounded">Delete</button>
-        <button onclick="addAgentToClient(${c.id})" class="bg-green-500 text-white px-2 py-1 rounded">+ Add</button>
+        <button onclick="addAgentToClient(${c.id})" class="bg-green-400 text-white px-2 py-1 rounded">+ Add</button>
       </td>
     </tr>
   `).join("");
@@ -369,6 +428,15 @@ async function editClient(id){
   edit_color.value = data.client.primary_color;
 
   document.getElementById("editModal").classList.remove("hidden");
+  // 🔥 Set value billing
+  if(document.getElementById("edit_billing_type")) {
+    document.getElementById("edit_billing_type").value = data.client.billing_type || "prepaid";
+    document.getElementById("edit_price_marketing").value = data.client.price_marketing || 880;
+    document.getElementById("edit_price_utility").value = data.client.price_utility || 600;
+    document.getElementById("edit_price_auth").value = data.client.price_authentication || 600;
+    document.getElementById("edit_price_service").value = data.client.price_service || 350;
+  }
+  
 }
 
 //SAVE EDIT CLIENT  
@@ -384,7 +452,13 @@ async function saveEdit(){
         bearer_token: edit_token.value,
         logo_url: edit_logo.value,
         primary_color: edit_color.value,
-        actor_email: localStorage.getItem("email") // 🔥 TAMBAHKAN BARIS INI
+        actor_email: localStorage.getItem("email"),
+        // 🔥 TAMBAHAN BILLING
+        billing_type: document.getElementById("edit_billing_type")?.value || "prepaid",
+        price_marketing: parseInt(document.getElementById("edit_price_marketing")?.value || 880),
+        price_utility: parseInt(document.getElementById("edit_price_utility")?.value || 600),
+        price_authentication: parseInt(document.getElementById("edit_price_auth")?.value || 600),
+        price_service: parseInt(document.getElementById("edit_price_service")?.value || 350)
       })
     });
 
