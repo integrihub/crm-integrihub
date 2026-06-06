@@ -14,6 +14,10 @@ const SET_CID = localStorage.getItem("client_id");
 // Saat file dimuat, otomatis narik data setting
 window.addEventListener("DOMContentLoaded", () => {
   set_loadData();
+  
+  // 🔥 BIKIN REAL-TIME: Otomatis narik data saldo terbaru setiap 15 detik 
+  // Tanpa perlu klien ngetik tombol refresh halaman
+  setInterval(set_loadData, 15000); 
 });
 
 // ================= FETCH DATA & RENDER =================
@@ -31,6 +35,21 @@ async function set_loadData() {
     document.getElementById("set_accName").innerText = client.name || "-";
     document.getElementById("set_accEmail").innerText = localStorage.getItem("email") || "-";
     document.getElementById("set_accSender").innerText = client.sender ? "+" + client.sender : "Belum Terhubung";
+
+    // 🔥 RENDER SALDO & TIPE BILLING KLIEN
+    const balanceEl = document.getElementById("set_accBalance");
+    const billingEl = document.getElementById("set_accBillingType");
+
+    if (balanceEl && billingEl) {
+      if (client.billing_type === "postpaid") {
+        balanceEl.innerText = "Postpaid";
+        billingEl.innerText = "(Tagihan Bulanan)";
+      } else {
+        const sisa = client.balance || 0;
+        balanceEl.innerText = sisa.toLocaleString('id-ID');
+        billingEl.innerText = "Token";
+      }
+    }
     
     // 2. Render Bearer Token
     const tokenInput = document.getElementById("set_accToken");
