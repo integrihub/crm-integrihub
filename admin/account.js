@@ -25,8 +25,11 @@ async function set_loadData() {
   if (!SET_CID) return;
 
   try {
-    // Tarik data client dari backend
-    const res = await fetch(`${SET_API}/client-info?client_id=${SET_CID}`);
+    // 🔥 TAMBAH { cache: "no-cache" } di sini supaya selalu ambil data baru dari database
+    const res = await fetch(`${SET_API}/client-info?client_id=${SET_CID}`, { 
+        cache: "no-cache" 
+    });
+    
     if (!res.ok) throw new Error("Gagal mengambil data");
     
     const client = await res.json();
