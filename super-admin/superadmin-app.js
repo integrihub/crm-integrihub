@@ -243,27 +243,79 @@ function renderTable(data){
   };
 
   // ================= TABLE =================
-  table.innerHTML = paginated.map(c=>`
-    <tr class="border hover:bg-gray-50 transition">
+  table.innerHTML = paginated.map((c, index) => `
+    <tr class="border hover:bg-gray-50 transition relative">
       <td class="p-3 font-semibold">${c.id}</td>
       <td class="p-3">${c.name}</td>
       <td class="p-3">${c.sender}</td>
-      <td class="p-3 text-green-600 font-bold">${c.billing_type === 'postpaid' ? 'Postpaid' : (c.balance || 0).toLocaleString('id-ID')}</td> <td class="p-3 text-sm text-gray-600 dark:text-gray-400">${formatWIB(c.created_at)}</td>
+      <td class="p-3 text-green-600 font-bold">${c.billing_type === 'postpaid' ? 'Postpaid' : (c.balance || 0).toLocaleString('id-ID')}</td>
+      <td class="p-3 text-sm text-gray-600 dark:text-gray-400">${formatWIB(c.created_at)}</td>
       <td class="p-3 text-sm text-gray-600 dark:text-gray-400">${formatWIB(c.update_at)}</td>
       <td class="p-3 text-center">
-        ${c.logo_url ? `<img src="${c.logo_url}" class="h-8 mx-auto cursor-pointer" onclick="window.open('${c.logo_url}')">` : "-"}
+        ${c.logo_url ? `<img src="${c.logo_url}" class="h-8 mx-auto cursor-pointer rounded" onclick="window.open('${c.logo_url}')">` : "-"}
       </td>
-      <td class="p-3 text-center space-x-1">
-        <button onclick="openTopUpModal(${c.id}, '${c.name.replace(/'/g, "\\'")}')" class="bg-green-600 text-white px-2 py-1 rounded">💳 Top Up</button> <button onclick="detailClient(${c.id})" class="bg-blue-500 text-white px-2 py-1 rounded">Detail</button>
-        <button onclick="editClient(${c.id})" class="bg-yellow-500 text-white px-2 py-1 rounded">Edit</button>
-        <button onclick="deleteClient(${c.id})" class="bg-red-500 text-white px-2 py-1 rounded">Delete</button>
-        <button onclick="addAgentToClient(${c.id})" class="bg-green-400 text-white px-2 py-1 rounded">+ Add</button>
+      <td class="p-3 text-center relative">
+        <button onclick="toggleActionMenu(${c.id})" class="text-gray-500 hover:text-gray-800 dark:hover:text-white p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path></svg>
+        </button>
+
+        <div id="actionMenu-${c.id}" class="hidden absolute right-8 top-10 w-40 bg-white dark:bg-gray-800 rounded shadow-lg border border-gray-200 dark:border-gray-700 z-50 overflow-hidden text-left">
+          
+          <button onclick="openTopUpModal(${c.id}, '${c.name.replace(/'/g, "\\'")}')" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+            <span class="text-green-500">💳</span> Top Up Token
+          </button>
+          
+          <button onclick="detailClient(${c.id})" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+            <span class="text-blue-500">👁️</span> Detail
+          </button>
+
+          <button onclick="editClient(${c.id})" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+            <span class="text-yellow-500">✏️</span> Edit
+          </button>
+
+          <button onclick="addAgentToClient(${c.id})" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+            <span class="text-emerald-500">👤</span> Add Agent
+          </button>
+
+          <hr class="border-gray-200 dark:border-gray-700">
+
+          <button onclick="deleteClient(${c.id})" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 flex items-center gap-2">
+            <span class="text-red-500">🗑️</span> Delete
+          </button>
+
+        </div>
       </td>
     </tr>
   `).join("");
 
   renderClientPagination(totalPages);
 }
+
+
+// ================= TOGGLE ACTION MENU (TITIK TIGA) =================
+function toggleActionMenu(id) {
+  // Tutup semua menu action yang lagi kebuka biar nggak numpuk
+  document.querySelectorAll('[id^="actionMenu-"]').forEach(menu => {
+    if (menu.id !== `actionMenu-${id}`) {
+      menu.classList.add('hidden');
+    }
+  });
+  
+  // Buka/tutup menu yang diklik
+  const targetMenu = document.getElementById(`actionMenu-${id}`);
+  if (targetMenu) {
+    targetMenu.classList.toggle('hidden');
+  }
+}
+
+// Global click listener buat nutup menu kalau user klik sembarang tempat di luar menu
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.text-center.relative')) {
+    document.querySelectorAll('[id^="actionMenu-"]').forEach(menu => {
+      menu.classList.add('hidden');
+    });
+  }
+});
 
 // ================= PAGINATION PAGE =================
 function renderClientPagination(totalPages){
