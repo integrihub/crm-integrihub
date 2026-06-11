@@ -842,16 +842,21 @@ function renderChatListUI() {
   }
 }
 
-// 🔥 FUNGSI LOAD SIDEBAR (DENGAN NAME PROTECTION)
+// 🔥 FUNGSI LOAD SIDEBAR (DENGAN NAME PERSISTENCE)
 async function loadSidebar(append = false) {
     if (isFetchingChat) return;
 
-    // Simpan map lama untuk referensi nama
-    let oldMap = { ...processedChatMap };
-    
-    if (!append) { 
-        chatOffset = 0; 
-        processedChatMap = {}; 
+    // 1. Simpan nama yang sudah dikenal sebelum list di-reset
+    let nameCache = {};
+    if (!append) {
+        Object.values(processedChatMap).forEach(c => {
+            // Hanya simpan nama yang bukan placeholder
+            if (c.name && !c.name.startsWith("User ")) {
+                nameCache[c.number] = c.name;
+            }
+        });
+        chatOffset = 0;
+        processedChatMap = {};
     }
 
     isFetchingChat = true;
@@ -863,21 +868,14 @@ async function loadSidebar(append = false) {
         
         if (Array.isArray(data) && data.length > 0) {
             data.forEach(c => {
-                const existingChat = oldMap[c.number] || {};
-                
-                // Fungsi pembantu untuk deteksi nama placeholder
-                const isPlaceholder = (n) => !n || n.trim() === "" || n.startsWith("User ");
-
-                // 🔥 LOGIKA PINTAR:
-                // 1. Jika nama dari API adalah placeholder ("User...")
-                // 2. TAPI kita punya nama asli yang bukan placeholder di memori (oldMap)
-                // 3. MAKA: Pakai nama dari memori (existingChat.name)
+                // 2. Tentukan nama: Prioritas Nama API -> Nama dari Cache -> Default "User XXXX"
                 let finalName = c.name;
-                if (isPlaceholder(finalName) && existingChat.name && !isPlaceholder(existingChat.name)) {
-                    finalName = existingChat.name;
-                } else if (isPlaceholder(finalName)) {
-                    // Jika memang belum punya nama, baru pakai format default
-                    finalName = "User " + c.number.slice(-4);
+                
+                // Cek apakah API memberikan nama placeholder
+                const isPlaceholder = !finalName || finalName.trim() === "" || finalName.startsWith("User ");
+                
+                if (isPlaceholder) {
+                    finalName = nameCache[c.number] || ("User " + c.number.slice(-4));
                 }
 
                 let displayMsg = c.last_message || (c.type && c.type !== 'text' ? `[${c.type.toUpperCase()}]` : '[Media]');
@@ -889,7 +887,7 @@ async function loadSidebar(append = false) {
 
                 processedChatMap[c.number] = {
                     number: c.number,
-                    name: finalName, 
+                    name: finalName, // Nama sudah aman sekarang
                     last_message: displayMsg,
                     last_time: c.timestamp,
                     last_status: c.status,
@@ -903,7 +901,7 @@ async function loadSidebar(append = false) {
 
             renderChatListUI();
             
-            // Update Header Chat kalau lagi dibuka
+            // Update Header Chat kalau lagi dibuka agar tetap sinkron
             if (selected && processedChatMap[selected]) {
                 const chatNameEl = document.getElementById("chatName");
                 if (chatNameEl) chatNameEl.innerText = processedChatMap[selected].name;
