@@ -519,13 +519,12 @@ async function init(page){
   }
 
   if(page === "message"){
-    await loadSidebar(false); // Load daftar chat (kiri) pertama kali
+    await loadSidebar(false, false); // Load daftar chat pertama kali
     
-    // 🔥 FIX POLLING: 
-    // load() hanya untuk refresh chat tengah (3 detik)
-    // loadSidebar(false) untuk refresh sidebar kiri dengan data terbaru (10 detik)
     loadInterval = setInterval(load, 3000); 
-    setInterval(() => loadSidebar(false), 10000);
+    
+    // 🔥 FIX: Kirim 'true' pada parameter kedua agar loadSidebar tahu ini hanya Auto-Refresh (Polling)
+    setInterval(() => loadSidebar(false, true), 10000);
   }
 
   if(page === "template"){
@@ -873,8 +872,8 @@ function renderChatListUI() {
   }
 }
 
-// 🔥 FUNGSI SIDEBAR YANG SUDAH DIBUAT PINTAR (Tidak Menghapus Memori)
-async function loadSidebar(isAppend = false) {
+// 🔥 FIX: Tambah parameter isPolling agar interval tidak mereset memori
+async function loadSidebar(isAppend = false, isPolling = false) {
     if (isFetchingChat) return;
 
     // Ambil filter aktif
@@ -883,14 +882,19 @@ async function loadSidebar(isAppend = false) {
     
     let currentFetchOffset = isAppend ? chatOffset : 0;
     
-    if (!isAppend) {
+    // 🔥 PENTING: Hanya kosongkan memori jika BUKAN append dan BUKAN polling
+    if (!isAppend && !isPolling) {
         processedChatMap = {}; 
         chatOffset = 0; 
     }
 
     isFetchingChat = true;
     try {
-        const res = await fetch(`${API}/conversations?limit=50&offset=${currentFetchOffset}${statusParam}${searchParam}`, { 
+        // Jika polling, cukup tarik offset 0 (50 data teratas) untuk update status pesan baru.
+        // Jika tidak polling, tarik sesuai urutan scroll.
+        let fetchOffset = isPolling ? 0 : currentFetchOffset;
+
+        const res = await fetch(`${API}/conversations?limit=50&offset=${fetchOffset}${statusParam}${searchParam}`, { 
             headers: { "client-id": CID } 
         });
         const data = await res.json();
@@ -916,7 +920,7 @@ async function loadSidebar(isAppend = false) {
                     else if (c.type === "template") displayMsg = "🤖 " + displayMsg; 
                 }
 
-                // 🔥 UPDATE MEMORI (Tidak menghapus data yang sudah di-scroll sebelumnya)
+                // 🔥 UPDATE MEMORI (Menimpa data lama atau menambah yang baru tanpa mereset scroll)
                 processedChatMap[c.number] = {
                     number: c.number,
                     name: finalName, 
@@ -934,8 +938,8 @@ async function loadSidebar(isAppend = false) {
             // 🔥 Majukan offset HANYA jika sedang scroll bawah
             if (isAppend) {
                 chatOffset += 50; 
-            } else if (chatOffset === 0) {
-                // Set offset awal 50 untuk persiapan scroll pertama kali
+            } else if (chatOffset === 0 && !isPolling) {
+                // Set offset awal 50 untuk persiapan scroll pertama kali (tapi jangan diubah saat polling)
                 chatOffset = 50;
             }
 
