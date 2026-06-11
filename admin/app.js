@@ -599,7 +599,7 @@ function setChatFilter(filter) {
      activeBtn.classList.remove('bg-gray-100', 'dark:bg-gray-700', 'text-gray-500', 'dark:text-gray-300');
      activeBtn.classList.add('bg-green-500', 'text-white');
   }
-  loadSidebar(false);
+  renderChatListUI();
 }
 
 // ================= TOGGLE RESOLVE API ACTION =================
