@@ -514,6 +514,7 @@ async function init(page){
     await loadSidebar(false); // 🔥 Load daftar chat (kiri)
     await load();             // 🔥 Load history chat (tengah)
     loadInterval = setInterval(load, 3000); // Biarkan tetap refresh history tengah saja
+    setInterval(() => loadSidebar(true), 10000);
   }
 
   if(page === "template"){
@@ -618,6 +619,8 @@ async function toggleResolveChat() {
     if(!res.ok || data.error) throw new Error(data.error || "Gagal server");
 
     await load();
+    await loadSidebar(false);
+    renderChatListUI();
     if(document.getElementById("dashboardView").classList.contains("hidden") === false) {
        loadKPI(); 
     }
@@ -848,6 +851,8 @@ async function loadSidebar(append = false) {
         
         if (Array.isArray(data) && data.length > 0) {
             data.forEach(c => {
+              const existingChat = processedChatMap[c.number] || {};
+
                 // 🔥 LOGIKA FORMATTING (Pindah dari load ke sini)
                 let displayMsg = c.last_message || (c.type && c.type !== 'text' ? `[${c.type.toUpperCase()}]` : '[Media]');
                 if (typeof displayMsg === "string") {
@@ -857,18 +862,19 @@ async function loadSidebar(append = false) {
                 }
 
                 processedChatMap[c.number] = {
-                    number: c.number,
-                    name: c.name || "User " + c.number.slice(-4),
-                    last_message: displayMsg,
-                    last_time: c.timestamp,
-                    last_status: c.status,
-                    is_last_out: (c.direction === "outgoing"),
-                    is_unassigned: !c.assigned_to,
-                    is_unread: (c.direction !== "outgoing"),
-                    is_closed: (c.is_closed == 1),
-                    assigned_to: c.assigned_to
-                };
-            });
+        number: c.number,
+        // 🔥 FIX: Pakai nama lama jika nama dari API kosong
+        name: c.name || existingChat.name || "User " + c.number.slice(-4), 
+        last_message: displayMsg,
+        last_time: c.timestamp,
+        last_status: c.status,
+        is_last_out: (c.direction === "outgoing"),
+        is_unassigned: !c.assigned_to,
+        is_unread: (c.direction !== "outgoing"),
+        is_closed: (c.is_closed == 1),
+        assigned_to: c.assigned_to
+    };
+});
 
             renderChatListUI();
             chatOffset += 50; 
@@ -880,35 +886,42 @@ async function loadSidebar(append = false) {
     }
 }
 
-// DELETE CHAT
-  async function deleteChat(num){
- if(!confirm("Yakin mau hapus semua chat user ini?")) return;
+// DELETE CHAT (FIXED)
+async function deleteChat(num){
+  if(!confirm("Yakin mau hapus semua chat user ini?")) return;
 
- try {
-   await fetch(API+"/delete-chat",{
-     method:"POST",
-     headers:{"Content-Type":"application/json"},
-     body:JSON.stringify({
-       number:num,
-       client_id:CID
-     })
-   });
+  try {
+    await fetch(API+"/delete-chat",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        number:num,
+        client_id:CID
+      })
+    });
 
-   alert("Chat berhasil dihapus");
+    alert("Chat berhasil dihapus");
 
-   // reset state
-   selected = null;
-   chatBox.innerHTML = "";
-   chatName.innerText = "";
-   chatNumber.innerText = "";
+    // 1. Reset UI Chat Box (Tengah)
+    selected = null;
+    chatBox.innerHTML = "";
+    chatName.innerText = "";
+    chatNumber.innerText = "";
 
-   // reload
-   load();
+    // 2. 🔥 SINKRONISASI SIDEBAR (Hapus dari memori & update tampilan)
+    delete processedChatMap[num]; // Hapus user dari map sidebar
+    renderChatListUI();           // Render ulang list sidebar supaya langsung hilang
 
- } catch(err){
-   console.log("DELETE ERROR:", err);
-   alert("Gagal hapus chat");
- }
+    // 3. Reload sidebar dari server untuk memastikan data benar-benar bersih
+    await loadSidebar(false);
+
+    // 4. Reload chat bubble
+    load();
+
+  } catch(err){
+    console.log("DELETE ERROR:", err);
+    alert("Gagal hapus chat");
+  }
 }
 
 // ================= OPEN CHAT (SINKRONISASI UI) =================
@@ -1530,6 +1543,8 @@ async function send(){
  document.getElementById("filePreviewBox").innerHTML = "";
  document.getElementById("file").value = "";
  msg.value="";
+
+ await loadSidebar(false);
 
  // 🔥 kasih delay biar backend sempet save
  setTimeout(load, 500);
