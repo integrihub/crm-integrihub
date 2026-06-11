@@ -599,7 +599,7 @@ function setChatFilter(filter) {
      activeBtn.classList.remove('bg-gray-100', 'dark:bg-gray-700', 'text-gray-500', 'dark:text-gray-300');
      activeBtn.classList.add('bg-green-500', 'text-white');
   }
-  renderChatListUI();
+  loadSidebar(false);
 }
 
 // ================= TOGGLE RESOLVE API ACTION =================
@@ -877,16 +877,23 @@ function renderChatListUI() {
 async function loadSidebar(isAppend = false) {
     if (isFetchingChat) return;
 
-    // Tentukan offset. Jika refresh background, ambil 50 teratas saja.
-    // Jika scroll bawah (append), lanjutkan dari titik terakhir.
+    // 1. 🔥 Gunakan statusParam ini di fetch (sebelumnya Anda buat tapi tidak dipakai)
+    const statusParam = (activeChatFilter === 'resolved') ? "&status=resolved" : "";
+
     let currentFetchOffset = 0;
+    
+    // 2. 🔥 Reset data & offset jika ini bukan scroll (fresh load / ganti tab)
     if (isAppend) {
         currentFetchOffset = chatOffset;
+    } else {
+        processedChatMap = {}; // Reset memori agar tab tidak tercampur
+        chatOffset = 0;        // Reset pagination
     }
 
     isFetchingChat = true;
     try {
-        const res = await fetch(`${API}/conversations?limit=50&offset=${currentFetchOffset}`, { 
+        // 3. 🔥 Tambahkan ${statusParam} ke URL fetch
+        const res = await fetch(`${API}/conversations?limit=50&offset=${currentFetchOffset}${statusParam}`, { 
             headers: { "client-id": CID } 
         });
         const data = await res.json();
