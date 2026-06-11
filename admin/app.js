@@ -14,8 +14,12 @@ let activeChatFilter = 'all';
 let chatSearchQuery = '';
 let processedChatMap = {};
 
-// 🔥 BUKU TELEPON PRIBADI (Tidak akan pernah di-reset)
-let CONTACT_REGISTRY = {};
+// 🔥 BUKU TELEPON PRIBADI (Pake LocalStorage biar awet saat refresh)
+let CONTACT_REGISTRY = JSON.parse(localStorage.getItem("contact_registry") || "{}");
+
+function saveRegistry() {
+    localStorage.setItem("contact_registry", JSON.stringify(CONTACT_REGISTRY));
+}
 
 //PAGINATION MESSAGE
 let chatOffset = 0;
@@ -683,9 +687,14 @@ async function load(){
 sortedData.forEach(m => {
     // Jika ada nama yang valid (bukan placeholder "User ...")
     if (m.name && !m.name.toLowerCase().startsWith("user")) {
-        // Tentukan nomor user (karena pesan bisa incoming/outgoing)
+        // Tentukan nomor user
         const userNum = (m.sender === selected) ? m.sender : m.receiver;
-        CONTACT_REGISTRY[userNum] = m.name;
+        
+        // Simpan hanya jika nama berubah/baru
+        if (CONTACT_REGISTRY[userNum] !== m.name) {
+            CONTACT_REGISTRY[userNum] = m.name;
+            saveRegistry(); // 🔥 PENTING: Simpan ke localStorage
+        }
     }
 });
 
@@ -877,18 +886,16 @@ async function loadSidebar(append = false) {
             data.forEach(c => {
     // 1. Tentukan nama awal dari API
     let finalName = c.name;
-
-    // 2. Cek apakah ini placeholder (User XXXX)
     const isPlaceholder = !finalName || finalName.trim() === "" || finalName.toLowerCase().startsWith("user");
 
-    // 3. Logika Registry
+    // 2. Logika Registry
     if (isPlaceholder) {
-        // Jika placeholder, ambil dari Registry. Jika Registry juga kosong, pakai default
-        finalName = (CONTACT_REGISTRY && CONTACT_REGISTRY[c.number]) ? CONTACT_REGISTRY[c.number] : ("User " + c.number.slice(-4));
+        // Jika API kasih "User XXXX", cek apakah kita punya nama asli di Registry
+        finalName = CONTACT_REGISTRY[c.number] || ("User " + c.number.slice(-4));
     } else {
-        // Jika nama VALID, update Registry agar diingat selamanya
-        if (!CONTACT_REGISTRY) CONTACT_REGISTRY = {}; 
+        // Jika API kasih nama ASLI (Bukan User XXXX), update Registry & Save
         CONTACT_REGISTRY[c.number] = finalName;
+        saveRegistry(); 
     }
 
                 let displayMsg = c.last_message || (c.type && c.type !== 'text' ? `[${c.type.toUpperCase()}]` : '[Media]');
