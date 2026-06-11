@@ -802,6 +802,8 @@ function renderChatListUI() {
 
  // 5. Render ke HTML
   chatListEl.innerHTML = list.map(c => {
+    const displayName = CONTACT_REGISTRY[c.number] || c.name;
+
       const nameClass = c.is_unread ? "font-extrabold text-black dark:text-white" : "font-semibold text-gray-800 dark:text-gray-200";
       const msgClass = c.is_unread ? "font-bold text-gray-800 dark:text-gray-300" : "font-normal text-gray-500 dark:text-gray-400";
       
