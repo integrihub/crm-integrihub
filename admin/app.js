@@ -877,23 +877,18 @@ function renderChatListUI() {
 async function loadSidebar(isAppend = false) {
     if (isFetchingChat) return;
 
-    // 1. 🔥 Gunakan statusParam ini di fetch (sebelumnya Anda buat tapi tidak dipakai)
     const statusParam = (activeChatFilter === 'resolved') ? "&status=resolved" : "";
 
+    // Tentukan offset. Jika refresh background, ambil 50 teratas saja.
+    // Jika scroll bawah (append), lanjutkan dari titik terakhir.
     let currentFetchOffset = 0;
-    
-    // 2. 🔥 Reset data & offset jika ini bukan scroll (fresh load / ganti tab)
     if (isAppend) {
         currentFetchOffset = chatOffset;
-    } else {
-        processedChatMap = {}; // Reset memori agar tab tidak tercampur
-        chatOffset = 0;        // Reset pagination
     }
 
     isFetchingChat = true;
     try {
-        // 3. 🔥 Tambahkan ${statusParam} ke URL fetch
-        const res = await fetch(`${API}/conversations?limit=50&offset=${currentFetchOffset}${statusParam}`, { 
+        const res = await fetch(`${API}/conversations?limit=50&offset=${currentFetchOffset}`, { 
             headers: { "client-id": CID } 
         });
         const data = await res.json();
