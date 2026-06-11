@@ -875,17 +875,21 @@ async function loadSidebar(append = false) {
         
         if (Array.isArray(data) && data.length > 0) {
             data.forEach(c => {
-                // 1. Tentukan nama: Prioritas Nama API -> Nama dari Registry -> Default "User XXXX"
-                let finalName = c.name;
-                const isPlaceholder = !finalName || finalName.trim() === "" || finalName.toLowerCase().startsWith("user");
-                
-                // Jika API kasih placeholder, ambil dari Registry
-                if (isPlaceholder) {
-                    finalName = CONTACT_REGISTRY[c.number] || ("User " + c.number.slice(-4));
-                } else {
-                    // JIKA API KASIH NAMA VALID (Bukan User XXXX), SIMPAN KE REGISTRY!
-                    CONTACT_REGISTRY[c.number] = finalName;
-                }
+    // 1. Tentukan nama awal dari API
+    let finalName = c.name;
+
+    // 2. Cek apakah ini placeholder (User XXXX)
+    const isPlaceholder = !finalName || finalName.trim() === "" || finalName.toLowerCase().startsWith("user");
+
+    // 3. Logika Registry
+    if (isPlaceholder) {
+        // Jika placeholder, ambil dari Registry. Jika Registry juga kosong, pakai default
+        finalName = (CONTACT_REGISTRY && CONTACT_REGISTRY[c.number]) ? CONTACT_REGISTRY[c.number] : ("User " + c.number.slice(-4));
+    } else {
+        // Jika nama VALID, update Registry agar diingat selamanya
+        if (!CONTACT_REGISTRY) CONTACT_REGISTRY = {}; 
+        CONTACT_REGISTRY[c.number] = finalName;
+    }
 
                 let displayMsg = c.last_message || (c.type && c.type !== 'text' ? `[${c.type.toUpperCase()}]` : '[Media]');
                 if (typeof displayMsg === "string") {
