@@ -627,9 +627,16 @@ async function toggleResolveChat() {
     const data = await res.json();
     if(!res.ok || data.error) throw new Error(data.error || "Gagal server");
 
+    // 🔥 FIX: MANUALLY UPDATE MEMORI LOKAL SEKARANG JUGA!
+    // Ini memastikan chat langsung pindah ke tab Resolved tanpa nunggu reload
+    if (processedChatMap[selected]) {
+        processedChatMap[selected].is_closed = (newStatus === 1);
+    }
+
     await load();
     await loadSidebar(false);
-    renderChatListUI();
+    renderChatListUI(); // Langsung render ulang UI-nya
+
     if(document.getElementById("dashboardView").classList.contains("hidden") === false) {
        loadKPI(); 
     }
@@ -866,37 +873,37 @@ function renderChatListUI() {
   }
 }
 
-async function loadSidebar(append = false) {
+// 🔥 FUNGSI SIDEBAR YANG SUDAH DIBUAT PINTAR (Tidak Menghapus Memori)
+async function loadSidebar(isAppend = false) {
     if (isFetchingChat) return;
 
-    // Tidak perlu lagi reset nameCache di sini, karena kita pakai CONTACT_REGISTRY yang global
-    if (!append) {
-        chatOffset = 0;
-        processedChatMap = {};
+    // Tentukan offset. Jika refresh background, ambil 50 teratas saja.
+    // Jika scroll bawah (append), lanjutkan dari titik terakhir.
+    let currentFetchOffset = 0;
+    if (isAppend) {
+        currentFetchOffset = chatOffset;
     }
 
     isFetchingChat = true;
     try {
-        const res = await fetch(`${API}/conversations?limit=50&offset=${chatOffset}`, { 
+        const res = await fetch(`${API}/conversations?limit=50&offset=${currentFetchOffset}`, { 
             headers: { "client-id": CID } 
         });
         const data = await res.json();
         
         if (Array.isArray(data) && data.length > 0) {
             data.forEach(c => {
-    // 1. Tentukan nama awal dari API
-    let finalName = c.name;
-    const isPlaceholder = !finalName || finalName.trim() === "" || finalName.toLowerCase().startsWith("user");
+                let finalName = c.name;
+                const isPlaceholder = !finalName || finalName.trim() === "" || finalName.toLowerCase().startsWith("user");
 
-    // 2. Logika Registry
-    if (isPlaceholder) {
-        // Jika API kasih "User XXXX", cek apakah kita punya nama asli di Registry
-        finalName = CONTACT_REGISTRY[c.number] || ("User " + c.number.slice(-4));
-    } else {
-        // Jika API kasih nama ASLI (Bukan User XXXX), update Registry & Save
-        CONTACT_REGISTRY[c.number] = finalName;
-        saveRegistry(); 
-    }
+                if (isPlaceholder) {
+                    finalName = CONTACT_REGISTRY[c.number] || ("User " + c.number.slice(-4));
+                } else {
+                    if (CONTACT_REGISTRY[c.number] !== finalName) {
+                        CONTACT_REGISTRY[c.number] = finalName;
+                        saveRegistry(); 
+                    }
+                }
 
                 let displayMsg = c.last_message || (c.type && c.type !== 'text' ? `[${c.type.toUpperCase()}]` : '[Media]');
                 if (typeof displayMsg === "string") {
@@ -905,6 +912,7 @@ async function loadSidebar(append = false) {
                     else if (c.type === "template") displayMsg = "🤖 " + displayMsg; 
                 }
 
+                // 🔥 UPDATE MEMORI (Tidak menghapus data yang sudah di-scroll sebelumnya)
                 processedChatMap[c.number] = {
                     number: c.number,
                     name: finalName, 
@@ -919,14 +927,20 @@ async function loadSidebar(append = false) {
                 };
             });
 
+            // 🔥 Majukan offset HANYA jika sedang scroll bawah
+            if (isAppend) {
+                chatOffset += 50; 
+            } else if (chatOffset === 0) {
+                // Set offset awal 50 untuk persiapan scroll pertama kali
+                chatOffset = 50;
+            }
+
             renderChatListUI();
             
             if (selected && processedChatMap[selected]) {
                 const chatNameEl = document.getElementById("chatName");
                 if (chatNameEl) chatNameEl.innerText = processedChatMap[selected].name;
             }
-
-            chatOffset += 50; 
         }
     } catch(e) {
         console.error("Gagal load sidebar:", e);
