@@ -143,6 +143,11 @@ let isSending = false;
 let fileMime = null;
 let uploadedHeaderUrl = null;
 
+// 🔥 STATE BARU UNTUK INFINITE SCROLL BUBBLE CHAT
+let CURRENT_ROOM_MESSAGES = [];
+let isFetchingHistory = false;
+let hasMoreHistory = true;
+
 //PAGINATION LIST TEMPLATE
 let allTemplates = [];
 let currentPage = 1;
@@ -480,7 +485,6 @@ async function init(page){
 
   if(!CID){
     alert("Session expired");
-    // Langsung tembak ke root domain juga
     window.location.replace("/login.html"); 
     return;
   }
@@ -488,7 +492,6 @@ async function init(page){
   await loadBranding();
   loadProfile();
 
-  // 🔥 CACHE TEMPLATE AGAR CHAT HISTORY SELALU SEMPURNA
   try {
     const resTpl = await fetch(API + "/templates?client_id=" + CID);
     const rawTpl = await resTpl.json();
@@ -497,32 +500,31 @@ async function init(page){
     console.log("Gagal load cache template", e); 
   }
 
-  // ✅ ACTIVE MENU (ANTI BUG)
   if(page === "dashboard") setActiveMenu("menuDashboard");
   if(page === "message") setActiveMenu("menuMessage");
   if(page === "template") setActiveMenu("menuTemplate");
   if(page === "campaign") setActiveMenu("menuCampaign");
   if(page === "report") setActiveMenu("menuReport");
 
-  // ✅ LOAD PER PAGE
   if(page === "dashboard"){
     loadKPI();
     kpiInterval = setInterval(loadKPI, 30000);
   }
 
   if(page === "message"){
-    await loadSidebar(false); // 🔥 Load daftar chat (kiri)
-    await load();             // 🔥 Load history chat (tengah)
-    loadInterval = setInterval(load, 3000); // Biarkan tetap refresh history tengah saja
-    setInterval(() => loadSidebar(true), 10000);
+    await loadSidebar(false); // Load daftar chat (kiri) pertama kali
+    
+    // 🔥 FIX POLLING: 
+    // load() hanya untuk refresh chat tengah (3 detik)
+    // loadSidebar(false) untuk refresh sidebar kiri dengan data terbaru (10 detik)
+    loadInterval = setInterval(load, 3000); 
+    setInterval(() => loadSidebar(false), 10000);
   }
 
   if(page === "template"){
     loadTemplates();
   }
   
-
-  // ✅ DARK MODE FIX
   applyTheme();
 }
 
@@ -662,68 +664,71 @@ function formatTimeShort(t) {
   }
 }
 
-// ================= LOAD DATA (FOKUS HANYA UNTUK BUBBLE CHAT TENGAH) =================
+// ================= AUTO REFRESH CHAT TENGAH (SANGAT RINGAN) =================
 async function load(){
-  if(!CLIENT) return;
+  if(!CLIENT || !selected) return; // Stop kalau gak ada chat yang lagi dibuka
+  
   try {
-    // 1. Ambil data pesan untuk TAMPILAN TENGAH
-    const res = await fetch(API+"/messages", { headers: { "client-id": CID } });
-    const rawData = await res.json();
-    if(!Array.isArray(rawData)) return;
-    
-    // Tetap ambil data mentah untuk filter chat bubble di tengah
-    ALL_MESSAGES = rawData;
+    // 1. Tarik HANYA pesan terbaru untuk user yang sedang aktif di layar
+    const res = await fetch(`${API}/messages?target=${selected}&limit=50`, { headers: { "client-id": CID } });
+    const data = await res.json();
+    if(!Array.isArray(data)) return;
 
-    // 🔥 LOGIKA SIDEBAR (const map, sorted.forEach, renderChatListUI) SUDAH SAYA HAPUS TOTAL
-    // Karena tugasnya sudah pindah ke loadSidebar() agar aplikasi tidak lemot
+    const sortedData = data.sort((a, b) => a.id - b.id);
 
-    // 2. TETAPKAN: Logika Mirroring UI (Resolve/Reopen/Bubble Chat)
-    // Bagian ini adalah "NYAWA" chat box tengah, JANGAN HAPUS.
-    if(selected && processedChatMap[selected]){
-        const current = processedChatMap[selected];
-        const btnResolve = document.getElementById("btnResolve");
-        const chatInputArea = document.getElementById("chatInputArea");
+    // 2. Filter pesan yang belum ada di state (pesan baru masuk)
+    const newMessages = sortedData.filter(m => 
+        !CURRENT_ROOM_MESSAGES.some(existing => existing.id === m.id)
+    );
 
-        if(current.is_closed){
-            if(btnResolve) {
-                btnResolve.innerHTML = "🔄 Reopen Chat";
-                btnResolve.classList.replace("text-green-600", "text-gray-500");
-            }
-            chatInputArea?.classList.add("hidden");
-            chatInputArea?.classList.remove("flex");
-        } else {
-            if(btnResolve) {
-                btnResolve.innerHTML = "✅ Resolve";
-                btnResolve.classList.replace("text-gray-500", "text-green-600");
-            }
-            chatInputArea?.classList.remove("hidden");
-            chatInputArea?.classList.add("flex");
+    // 3. Cek perubahan status centang (sent -> delivered -> read)
+    let isStatusChanged = false;
+    sortedData.forEach(m => {
+        const existing = CURRENT_ROOM_MESSAGES.find(x => x.id === m.id);
+        if (existing && existing.status !== m.status) {
+            existing.status = m.status;
+            isStatusChanged = true;
         }
+    });
 
-        // Render Bubble Chat (Tengah)
-        const filtered = ALL_MESSAGES.filter(m => (m.sender === selected && m.receiver === CLIENT.sender) || (m.sender === CLIENT.sender && m.receiver === selected));
-        const currentIds = filtered.map(x => x.id + "-" + x.status).join("|");
-        
-        if(currentIds !== LAST_RENDER){
-            LAST_RENDER = currentIds;
-            const chatBoxEl = document.getElementById("chatBox");
-            if(chatBoxEl) {
-                chatBoxEl.innerHTML = filtered.map(renderBubble).join('');
-                if(current.is_closed) {
-                    chatBoxEl.innerHTML += `
-                      <div class="flex justify-center mt-6 mb-2">
-                        <div class="bg-red-50 dark:bg-red-900/20 text-red-500 text-xs px-4 py-2 rounded-lg text-center border border-red-100 dark:border-red-800">
-                          Percakapan telah ditutup.<br>Klik <b>"🔄 Reopen Chat"</b> untuk membuka percakapan.
-                        </div>
-                      </div>
-                    `;
-                }
-                setTimeout(() => { chatBoxEl.scrollTo({ top: chatBoxEl.scrollHeight, behavior: "smooth" }); }, 100);
-            }
-        }
+    // 4. Render ulang kalau ada pesan baru atau perubahan centang
+    if (newMessages.length > 0) {
+        CURRENT_ROOM_MESSAGES = [...CURRENT_ROOM_MESSAGES, ...newMessages];
+        renderBubbleBox();
+        const chatBoxEl = document.getElementById("chatBox");
+        setTimeout(() => { chatBoxEl.scrollTo({ top: chatBoxEl.scrollHeight, behavior: "smooth" }); }, 100);
+    } else if (isStatusChanged) {
+        renderBubbleBox(); 
     }
+
+    // 5. Update Status Header (Tombol Resolve)
+    updateChatHeaderUI(selected);
+
   } catch(e) {
-    console.error("Gagal load data (Bubble Chat):", e);
+    console.error("Gagal auto-refresh chat:", e);
+  }
+}
+
+// 🔥 FUNGSI BANTUAN UNTUK UPDATE TOMBOL RESOLVE
+function updateChatHeaderUI(num) {
+  const isResolved = processedChatMap[num]?.is_closed;
+  const btnResolve = document.getElementById("btnResolve");
+  const chatInputArea = document.getElementById("chatInputArea");
+
+  if(isResolved){
+      if(btnResolve) {
+          btnResolve.innerHTML = "🔄 Reopen Chat";
+          btnResolve.classList.replace("text-green-600", "text-gray-500");
+      }
+      chatInputArea?.classList.add("hidden");
+      chatInputArea?.classList.remove("flex");
+  } else {
+      if(btnResolve) {
+          btnResolve.innerHTML = "✅ Resolve";
+          btnResolve.classList.replace("text-gray-500", "text-green-600");
+      }
+      chatInputArea?.classList.remove("hidden");
+      chatInputArea?.classList.add("flex");
   }
 }
 
@@ -925,7 +930,7 @@ async function deleteChat(num){
 }
 
 // ================= OPEN CHAT (SINKRONISASI UI) =================
-function openChat(num, name){
+async function openChat(num, name){
   selected = num;
   localStorage.setItem("admin_last_chat", JSON.stringify({ number: num, name: name }));
 
@@ -935,58 +940,108 @@ function openChat(num, name){
   const chatNumberEl = document.getElementById("chatNumber");
   const avatarEl = document.getElementById("avatar");
   const chatBoxEl = document.getElementById("chatBox");
-  
-  const btnResolve = document.getElementById("btnResolve");
-  const chatInputArea = document.getElementById("chatInputArea");
 
   if(!chatBoxEl) return;
 
   emptyStateEl?.classList.add("hidden");
   chatContentEl?.classList.remove("hidden");
 
-  chatNameEl.innerText = name;
+  // Ambil nama valid dari Sidebar Memory
+  const realName = processedChatMap[num]?.name || name;
+  chatNameEl.innerText = realName;
   chatNumberEl.innerText = num;
-  avatarEl.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&color=fff`;
+  avatarEl.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(realName)}&background=random&color=fff`;
 
-  // 🔥 CEK STATUS DARI MAP YANG SUDAH TERUPDATE
-  const isResolved = processedChatMap[num]?.is_closed;
+  // Update tampilan tombol Resolve
+  updateChatHeaderUI(num);
 
-  if(isResolved){
-     btnResolve.innerHTML = "🔄 Reopen Chat";
-     btnResolve.classList.replace("text-green-600", "text-gray-500");
-     if (chatInputArea) {
-         chatInputArea.classList.add("hidden");
-         chatInputArea.classList.remove("flex");
-     }
-  } else {
-     btnResolve.innerHTML = "✅ Resolve";
-     btnResolve.classList.replace("text-gray-500", "text-green-600");
-     if (chatInputArea) {
-         chatInputArea.classList.remove("hidden");
-         chatInputArea.classList.add("flex");
-     }
-  }
+  // 🔥 RESET STATE INFINITE SCROLL SAAT PINDAH USER
+  CURRENT_ROOM_MESSAGES = [];
+  hasMoreHistory = true;
+  LAST_RENDER = "";
+  chatBoxEl.innerHTML = `<div class="text-center text-xs text-gray-500 mt-10">Memuat riwayat percakapan...</div>`;
+  
+  await fetchChatHistory(num, null);
+}
 
-  const filtered = ALL_MESSAGES.filter(m => (m.sender === num && m.receiver === CLIENT.sender) || (m.sender === CLIENT.sender && m.receiver === num));
-  const currentIds = filtered.map(x => x.id + "-" + x.status).join("|");
-  if(currentIds === LAST_RENDER) return;
-  LAST_RENDER = currentIds;
+// 🔥 TARIK HISTORY CHAT KHUSUS 1 USER (PAGINATION / INFINITE SCROLL)
+async function fetchChatHistory(num, lastId = null) {
+    if (isFetchingHistory || !hasMoreHistory) return;
+    isFetchingHistory = true;
 
-  chatBoxEl.innerHTML = filtered.map(renderBubble).join('');
+    // Tarik 50 pesan. Jika lastId ada, tarik pesan sebelum lastId tersebut.
+    let url = `${API}/messages?target=${num}&limit=50`;
+    if (lastId) url += `&last_id=${lastId}`;
 
-  if(isResolved) {
-     chatBoxEl.innerHTML += `
-       <div class="flex justify-center mt-6 mb-2">
-         <div class="bg-red-50 dark:bg-red-900/20 text-red-500 text-xs px-4 py-2 rounded-lg text-center border border-red-100 dark:border-red-800">
-           Percakapan telah ditutup.<br>Klik <b>"🔄 Reopen Chat"</b> untuk membuka percakapan.
-         </div>
-       </div>
-     `;
-  }
+    try {
+        const res = await fetch(url, { headers: { "client-id": CID } });
+        const data = await res.json();
 
-  setTimeout(() => {
-    chatBoxEl.scrollTo({ top: chatBoxEl.scrollHeight, behavior: "smooth" });
-  }, 100);
+        // Jika data kurang dari 50, berarti chat sudah mentok di awal percakapan
+        if (!Array.isArray(data) || data.length < 50) {
+            hasMoreHistory = false; 
+        }
+
+        const sortedData = data.sort((a, b) => a.id - b.id); // Urut dari lama ke baru
+
+        const chatBoxEl = document.getElementById("chatBox");
+        let prevHeight = 0;
+        if (chatBoxEl) prevHeight = chatBoxEl.scrollHeight;
+
+        if (lastId) {
+            CURRENT_ROOM_MESSAGES = [...sortedData, ...CURRENT_ROOM_MESSAGES]; // Sisipkan ke atas
+        } else {
+            CURRENT_ROOM_MESSAGES = sortedData; // Load data pertama kali klik
+        }
+
+        renderBubbleBox();
+
+        // Tahan posisi scroll saat narik data lama agar tidak loncat ke bawah (Kayak WA Web)
+        if (lastId && chatBoxEl) {
+            chatBoxEl.scrollTop = chatBoxEl.scrollHeight - prevHeight;
+        } else if (chatBoxEl) {
+            chatBoxEl.scrollTo({ top: chatBoxEl.scrollHeight, behavior: "auto" });
+        }
+    } catch (e) {
+        console.error("Gagal load history:", e);
+    } finally {
+        isFetchingHistory = false;
+    }
+}
+
+// 🔥 RENDER KHUSUS KOTAK TENGAH
+function renderBubbleBox() {
+    const chatBoxEl = document.getElementById("chatBox");
+    if(!chatBoxEl || !selected) return;
+
+    const currentIds = CURRENT_ROOM_MESSAGES.map(x => x.id + "-" + x.status).join("|");
+    if(currentIds === LAST_RENDER) return;
+    LAST_RENDER = currentIds;
+
+    let html = "";
+    
+    // Tampilkan label loader
+    if (hasMoreHistory) {
+        html += `<div class="text-center text-xs text-blue-500 py-3 font-semibold opacity-70">Memuat pesan sebelumnya...</div>`;
+    } else if (CURRENT_ROOM_MESSAGES.length > 0) {
+        html += `<div class="text-center text-[11px] text-gray-400 py-4 border-b border-gray-100 dark:border-gray-700 mb-4">Awal percakapan</div>`;
+    }
+
+    // Render bubbles
+    html += CURRENT_ROOM_MESSAGES.map(renderBubble).join('');
+
+    // Info Resolve
+    if (processedChatMap[selected]?.is_closed) {
+         html += `
+           <div class="flex justify-center mt-6 mb-2">
+             <div class="bg-red-50 dark:bg-red-900/20 text-red-500 text-xs px-4 py-2 rounded-lg text-center border border-red-100 dark:border-red-800">
+               Percakapan telah ditutup.<br>Klik <b>"🔄 Reopen Chat"</b> untuk membuka percakapan.
+             </div>
+           </div>
+         `;
+    }
+
+    chatBoxEl.innerHTML = html;
 }
 
 // BUBBLE CHAT
@@ -2697,7 +2752,7 @@ function goDetail(id){
   location.href = "template-detail.html?id=" + id;
 }
 
-// ================= INIT =================
+// ================= INIT & SCROLL DETECTOR =================
 window.addEventListener("DOMContentLoaded", () => {
 
   const path = window.location.pathname;
@@ -2712,19 +2767,32 @@ window.addEventListener("DOMContentLoaded", () => {
     loadTemplatesList();
   }
 
+  // 🔥 PASANG DETEKTOR SCROLL DI SIDEBAR (DIMASUKKAN KE SINI)
+  const chatListContainer = document.getElementById("chatList");
+  if (chatListContainer) {
+      chatListContainer.addEventListener("scroll", () => {
+          // Kalau scroll sudah mentok bawah (kurang 50px)
+          if (chatListContainer.scrollTop + chatListContainer.clientHeight >= chatListContainer.scrollHeight - 50) {
+              loadSidebar(true); // Panggil load data berikutnya (append)
+          }
+      });
+  }
+
+  // 🔥 DETEKTOR INFINITE SCROLL BUBBLE CHAT (DIMASUKKAN KE SINI)
+  const chatBoxContainer = document.getElementById("chatBox");
+  if (chatBoxContainer) {
+      chatBoxContainer.addEventListener("scroll", () => {
+          // Kalau scroll sudah mentok/mendekati mentok atas (kurang dari 10px)
+          if (chatBoxContainer.scrollTop <= 10 && hasMoreHistory && !isFetchingHistory && CURRENT_ROOM_MESSAGES.length > 0) {
+              // Ambil ID pesan paling lama di layar saat ini
+              const oldestMsgId = CURRENT_ROOM_MESSAGES[0].id;
+              // Tarik pesan sebelumnya
+              fetchChatHistory(selected, oldestMsgId);
+          }
+      });
+  }
+
 });
-
-// 🔥 PASANG DETEKTOR SCROLL DI SIDEBAR
-const chatListContainer = document.getElementById("chatList");
-if (chatListContainer) {
-    chatListContainer.addEventListener("scroll", () => {
-        // Kalau scroll sudah mentok bawah (kurang 50px)
-        if (chatListContainer.scrollTop + chatListContainer.clientHeight >= chatListContainer.scrollHeight - 50) {
-            loadSidebar(true); // Panggil load data berikutnya (append)
-        }
-    });
-}
-
 
 // AUTO CLOSE EMOJI
 window.addEventListener("click", function(e){
