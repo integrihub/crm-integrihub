@@ -659,19 +659,23 @@ function formatTimeShort(t) {
   }
 }
 
-// ================= LOAD DATA (HANYA UNTUK TAMPILAN TENGAH) =================
+// ================= LOAD DATA (FOKUS HANYA UNTUK BUBBLE CHAT TENGAH) =================
 async function load(){
   if(!CLIENT) return;
   try {
+    // 1. Ambil data pesan untuk TAMPILAN TENGAH
     const res = await fetch(API+"/messages", { headers: { "client-id": CID } });
     const rawData = await res.json();
     if(!Array.isArray(rawData)) return;
     
+    // Tetap ambil data mentah untuk filter chat bubble di tengah
     ALL_MESSAGES = rawData;
 
-    // 🔥 BLOK FOREACH SIDEBAR SUDAH DIHAPUS.
-    // Sekarang load() cuma fokus ke render chat bubble di tengah:
+    // 🔥 LOGIKA SIDEBAR (const map, sorted.forEach, renderChatListUI) SUDAH SAYA HAPUS TOTAL
+    // Karena tugasnya sudah pindah ke loadSidebar() agar aplikasi tidak lemot
 
+    // 2. TETAPKAN: Logika Mirroring UI (Resolve/Reopen/Bubble Chat)
+    // Bagian ini adalah "NYAWA" chat box tengah, JANGAN HAPUS.
     if(selected && processedChatMap[selected]){
         const current = processedChatMap[selected];
         const btnResolve = document.getElementById("btnResolve");
@@ -693,6 +697,7 @@ async function load(){
             chatInputArea?.classList.add("flex");
         }
 
+        // Render Bubble Chat (Tengah)
         const filtered = ALL_MESSAGES.filter(m => (m.sender === selected && m.receiver === CLIENT.sender) || (m.sender === CLIENT.sender && m.receiver === selected));
         const currentIds = filtered.map(x => x.id + "-" + x.status).join("|");
         
@@ -715,7 +720,7 @@ async function load(){
         }
     }
   } catch(e) {
-    console.error("Gagal load data:", e);
+    console.error("Gagal load data (Bubble Chat):", e);
   }
 }
 
