@@ -14,6 +14,10 @@ let activeChatFilter = 'all';
 let chatSearchQuery = '';
 let processedChatMap = {};
 
+//PAGINATION MESSAGE
+let chatOffset = 0;
+let isFetchingChat = false;
+
 
 function insertParam(){
   const body = document.getElementById("tplBody");
@@ -507,8 +511,9 @@ async function init(page){
   }
 
   if(page === "message"){
-    await load();
-    loadInterval = setInterval(load, 3000);
+    await loadSidebar(false); // 🔥 Load daftar chat (kiri)
+    await load();             // 🔥 Load history chat (tengah)
+    loadInterval = setInterval(load, 3000); // Biarkan tetap refresh history tengah saja
   }
 
   if(page === "template"){
@@ -654,7 +659,7 @@ function formatTimeShort(t) {
   }
 }
 
-// ================= LOAD DATA & MAPPING (OTAK UTAMA) =================
+// ================= LOAD DATA (HANYA UNTUK TAMPILAN TENGAH) =================
 async function load(){
   if(!CLIENT) return;
   try {
@@ -663,73 +668,10 @@ async function load(){
     if(!Array.isArray(rawData)) return;
     
     ALL_MESSAGES = rawData;
-    const map = {};
 
-    // 🔥 PENTING: Urutkan ID terkecil ke terbesar agar pesan terbaru diproses terakhir
-    const sorted = [...ALL_MESSAGES].sort((a, b) => a.id - b.id);
+    // 🔥 BLOK FOREACH SIDEBAR SUDAH DIHAPUS.
+    // Sekarang load() cuma fokus ke render chat bubble di tengah:
 
-    sorted.forEach(m => {
-      const isOutgoing = (m.sender === CLIENT.sender);
-      const user = isOutgoing ? m.receiver : m.sender;
-      if (!user) return; // Safety check
-
-      let safeName = m.name || "User " + user.slice(-4);
-      const dbClosedStatus = (m.is_closed == 1);
-
-      // 🔥 LOGIKA TAMPILAN SIDEBAR UNTUK FLOW/BUTTON/TEMPLATE
-      let displayMsg = m.message || (m.type && m.type !== 'text' ? `[${m.type.toUpperCase()}]` : '[Media]');
-      if (typeof displayMsg === "string") {
-          if (displayMsg.includes("[Flow Submit]")) {
-              displayMsg = "📋 Mengisi Form/Flow";
-          } else if (displayMsg.includes("[Button Click]")) {
-              displayMsg = "↩️ " + displayMsg.replace("[Button Click]", "").trim();
-          } else if (m.type === "template") {
-              displayMsg = "🤖 " + displayMsg; 
-          }
-      }
-
-      if(!map[user]){
-        map[user] = {
-          number: user,
-          name: safeName,
-          last_message: displayMsg, // 🔥 Gunakan displayMsg di sini
-          last_time: m.timestamp,
-          last_status: m.status,
-          is_last_out: isOutgoing,
-          is_unassigned: !m.assigned_to, 
-          is_unread: !isOutgoing,         
-          is_closed: dbClosedStatus,
-          assigned_to: m.assigned_to // 🟢 TAMBAHAN BARU: Simpan data assignee
-        };
-      } else {
-        // Kalau pesan sekarang punya nama yang valid, update nama di map!
-        if (m.name && m.name !== "Unknown" && !m.name.startsWith("User ")) {
-            map[user].name = m.name;
-        }
-
-        map[user].last_message = displayMsg; // 🔥 Gunakan displayMsg di sini
-        map[user].last_time = m.timestamp;
-        map[user].last_status = m.status;
-        map[user].is_last_out = isOutgoing;
-        map[user].is_closed = dbClosedStatus;
-        map[user].is_unassigned = !m.assigned_to;
-        map[user].assigned_to = m.assigned_to; // 🟢 TAMBAHAN BARU: Update data assignee
-        
-        if (!isOutgoing) {
-            map[user].is_unread = true;
-            map[user].is_closed = false;
-        } else {
-            map[user].is_unread = false; 
-        }
-      }
-    });
-    
-    processedChatMap = map;
-    
-    // Jalankan Render
-    renderChatListUI();
-
-   // 🔥 MIRRORING UI KANAN: Update tombol Resolve & Input Area secara instan
     if(selected && processedChatMap[selected]){
         const current = processedChatMap[selected];
         const btnResolve = document.getElementById("btnResolve");
@@ -751,7 +693,6 @@ async function load(){
             chatInputArea?.classList.add("flex");
         }
 
-        // FIX AUTO MUNCUL ADMIN: Update chat history otomatis tanpa refresh
         const filtered = ALL_MESSAGES.filter(m => (m.sender === selected && m.receiver === CLIENT.sender) || (m.sender === CLIENT.sender && m.receiver === selected));
         const currentIds = filtered.map(x => x.id + "-" + x.status).join("|");
         
@@ -886,6 +827,52 @@ function renderChatListUI() {
   if(list.length === 0) {
       chatListEl.innerHTML = `<div class="p-6 text-center text-xs text-gray-400 italic">Tidak ada percakapan.</div>`;
   }
+}
+
+// 🔥 FUNGSI BARU: LOAD SIDEBAR (PAGINATION + FORMATTING)
+async function loadSidebar(append = false) {
+    if (isFetchingChat) return;
+    if (!append) { chatOffset = 0; processedChatMap = {}; }
+
+    isFetchingChat = true;
+    try {
+        const res = await fetch(`${API}/conversations?limit=50&offset=${chatOffset}`, { 
+            headers: { "client-id": CID } 
+        });
+        const data = await res.json();
+        
+        if (Array.isArray(data) && data.length > 0) {
+            data.forEach(c => {
+                // 🔥 LOGIKA FORMATTING (Pindah dari load ke sini)
+                let displayMsg = c.last_message || (c.type && c.type !== 'text' ? `[${c.type.toUpperCase()}]` : '[Media]');
+                if (typeof displayMsg === "string") {
+                    if (displayMsg.includes("[Flow Submit]")) displayMsg = "📋 Mengisi Form/Flow";
+                    else if (displayMsg.includes("[Button Click]")) displayMsg = "↩️ " + displayMsg.replace("[Button Click]", "").trim();
+                    else if (c.type === "template") displayMsg = "🤖 " + displayMsg; 
+                }
+
+                processedChatMap[c.number] = {
+                    number: c.number,
+                    name: c.name || "User " + c.number.slice(-4),
+                    last_message: displayMsg,
+                    last_time: c.timestamp,
+                    last_status: c.status,
+                    is_last_out: (c.direction === "outgoing"),
+                    is_unassigned: !c.assigned_to,
+                    is_unread: (c.direction !== "outgoing"),
+                    is_closed: (c.is_closed == 1),
+                    assigned_to: c.assigned_to
+                };
+            });
+
+            renderChatListUI();
+            chatOffset += 50; 
+        }
+    } catch(e) {
+        console.error("Gagal load sidebar:", e);
+    } finally {
+        isFetchingChat = false;
+    }
 }
 
 // DELETE CHAT
@@ -2706,6 +2693,17 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
 });
+
+// 🔥 PASANG DETEKTOR SCROLL DI SIDEBAR
+const chatListContainer = document.getElementById("chatList");
+if (chatListContainer) {
+    chatListContainer.addEventListener("scroll", () => {
+        // Kalau scroll sudah mentok bawah (kurang 50px)
+        if (chatListContainer.scrollTop + chatListContainer.clientHeight >= chatListContainer.scrollHeight - 50) {
+            loadSidebar(true); // Panggil load data berikutnya (append)
+        }
+    });
+}
 
 
 // AUTO CLOSE EMOJI
