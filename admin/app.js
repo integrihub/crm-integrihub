@@ -877,18 +877,20 @@ function renderChatListUI() {
 async function loadSidebar(isAppend = false) {
     if (isFetchingChat) return;
 
+    // Tambahkan status & search ke parameter
     const statusParam = (activeChatFilter === 'resolved') ? "&status=resolved" : "";
-
-    // Tentukan offset. Jika refresh background, ambil 50 teratas saja.
-    // Jika scroll bawah (append), lanjutkan dari titik terakhir.
-    let currentFetchOffset = 0;
-    if (isAppend) {
-        currentFetchOffset = chatOffset;
+    const searchParam = `&search=${encodeURIComponent(chatSearchQuery)}`;
+    
+    let currentFetchOffset = isAppend ? chatOffset : 0;
+    if (!isAppend) {
+        processedChatMap = {}; 
+        chatOffset = 0; 
     }
 
     isFetchingChat = true;
     try {
-        const res = await fetch(`${API}/conversations?limit=50&offset=${currentFetchOffset}`, { 
+        // 🔥 Kirim param status DAN search ke backend
+        const res = await fetch(`${API}/conversations?limit=50&offset=${currentFetchOffset}${statusParam}${searchParam}`, { 
             headers: { "client-id": CID } 
         });
         const data = await res.json();
