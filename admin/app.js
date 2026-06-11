@@ -842,15 +842,15 @@ function renderChatListUI() {
   }
 }
 
-// 🔥 FUNGSI BARU: LOAD SIDEBAR (PAGINATION + FORMATTING + FIX NAMA)
+// 🔥 FUNGSI LOAD SIDEBAR (DENGAN NAME PROTECTION)
 async function loadSidebar(append = false) {
     if (isFetchingChat) return;
+
+    // Simpan map lama untuk referensi nama
+    let oldMap = { ...processedChatMap };
     
-    // 🔥 FIX UTAMA: Simpan memori (map lama) supaya nama asli tidak hilang saat auto-refresh
-    let oldMap = {};
     if (!append) { 
         chatOffset = 0; 
-        oldMap = { ...processedChatMap }; 
         processedChatMap = {}; 
     }
 
@@ -863,10 +863,23 @@ async function loadSidebar(append = false) {
         
         if (Array.isArray(data) && data.length > 0) {
             data.forEach(c => {
-                // Tarik ingatan dari data lama sebelum di-reset
-                const existingChat = oldMap[c.number] || processedChatMap[c.number] || {};
+                const existingChat = oldMap[c.number] || {};
+                
+                // Fungsi pembantu untuk deteksi nama placeholder
+                const isPlaceholder = (n) => !n || n.trim() === "" || n.startsWith("User ");
 
-                // LOGIKA FORMATTING PESAN TERAKHIR
+                // 🔥 LOGIKA PINTAR:
+                // 1. Jika nama dari API adalah placeholder ("User...")
+                // 2. TAPI kita punya nama asli yang bukan placeholder di memori (oldMap)
+                // 3. MAKA: Pakai nama dari memori (existingChat.name)
+                let finalName = c.name;
+                if (isPlaceholder(finalName) && existingChat.name && !isPlaceholder(existingChat.name)) {
+                    finalName = existingChat.name;
+                } else if (isPlaceholder(finalName)) {
+                    // Jika memang belum punya nama, baru pakai format default
+                    finalName = "User " + c.number.slice(-4);
+                }
+
                 let displayMsg = c.last_message || (c.type && c.type !== 'text' ? `[${c.type.toUpperCase()}]` : '[Media]');
                 if (typeof displayMsg === "string") {
                     if (displayMsg.includes("[Flow Submit]")) displayMsg = "📋 Mengisi Form/Flow";
@@ -874,21 +887,9 @@ async function loadSidebar(append = false) {
                     else if (c.type === "template") displayMsg = "🤖 " + displayMsg; 
                 }
 
-                // 🔥 LOGIKA FIX NAMA (Mencegah Reset Jadi User XXXX saat admin balas)
-                let finalName = c.name;
-                
-                // Jika nama dari server kosong/null/undefined ATAU hanya berisi kata "User...", 
-                // kita comot nama asli dari memori sebelumnya (oldMap)
-                if (!finalName || finalName.trim() === "" || finalName === c.number || finalName.startsWith("User ")) {
-                    if (existingChat.name && existingChat.name.trim() !== "" && !existingChat.name.startsWith("User ") && existingChat.name !== c.number) {
-                        finalName = existingChat.name;
-                    }
-                }
-
                 processedChatMap[c.number] = {
                     number: c.number,
-                    // Gunakan finalName, jika masih kosong parah baru jatuh ke User XXXX
-                    name: finalName || existingChat.name || "User " + c.number.slice(-4), 
+                    name: finalName, 
                     last_message: displayMsg,
                     last_time: c.timestamp,
                     last_status: c.status,
@@ -902,14 +903,10 @@ async function loadSidebar(append = false) {
 
             renderChatListUI();
             
-            // 🔥 SINKRONKAN JUGA KE HEADER KOTAK CHAT (TENGAH) JIKA SEDANG DIBUKA
+            // Update Header Chat kalau lagi dibuka
             if (selected && processedChatMap[selected]) {
-                const activeName = processedChatMap[selected].name;
                 const chatNameEl = document.getElementById("chatName");
-                // Update header kalau namanya sudah kembali menjadi nama yang valid
-                if (chatNameEl && chatNameEl.innerText !== activeName && !activeName.startsWith("User ")) {
-                    chatNameEl.innerText = activeName;
-                }
+                if (chatNameEl) chatNameEl.innerText = processedChatMap[selected].name;
             }
 
             chatOffset += 50; 
