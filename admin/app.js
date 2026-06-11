@@ -583,7 +583,7 @@ function showMessage(){
 // ================= FUNGSI FILTER & SEARCH UI =================
 function handleChatSearch() {
   chatSearchQuery = document.getElementById("searchChatInput").value.toLowerCase();
-  renderChatListUI();
+  loadSidebar(false);
 }
 
 function setChatFilter(filter) {
@@ -599,7 +599,7 @@ function setChatFilter(filter) {
      activeBtn.classList.remove('bg-gray-100', 'dark:bg-gray-700', 'text-gray-500', 'dark:text-gray-300');
      activeBtn.classList.add('bg-green-500', 'text-white');
   }
-  renderChatListUI();
+  loadSidebar(false);
 }
 
 // ================= TOGGLE RESOLVE API ACTION =================
@@ -877,11 +877,12 @@ function renderChatListUI() {
 async function loadSidebar(isAppend = false) {
     if (isFetchingChat) return;
 
-    // Tambahkan status & search ke parameter
-    const statusParam = (activeChatFilter === 'resolved') ? "&status=resolved" : "";
+    // Ambil filter aktif
+    const statusParam = `&status=${activeChatFilter}`; 
     const searchParam = `&search=${encodeURIComponent(chatSearchQuery)}`;
     
     let currentFetchOffset = isAppend ? chatOffset : 0;
+    
     if (!isAppend) {
         processedChatMap = {}; 
         chatOffset = 0; 
@@ -889,7 +890,6 @@ async function loadSidebar(isAppend = false) {
 
     isFetchingChat = true;
     try {
-        // 🔥 Kirim param status DAN search ke backend
         const res = await fetch(`${API}/conversations?limit=50&offset=${currentFetchOffset}${statusParam}${searchParam}`, { 
             headers: { "client-id": CID } 
         });
