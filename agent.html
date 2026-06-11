@@ -250,14 +250,23 @@ let isSending = false;
 
 let allTemplates = []; 
 
+
 // UI STATE
 let activeChatFilter = 'all';
 let chatSearchQuery = '';
 let processedChatMap = {}; 
 
+// STATE PAGINATION & INFINITE SCROLL
+let chatOffset = 0;
+let isFetchingChat = false;
+let CURRENT_ROOM_MESSAGES = [];
+let isFetchingHistory = false;
+let hasMoreHistory = true;
+let LAST_ASSIGNED_CACHE = [];
+
 function handleChatSearch() {
   chatSearchQuery = document.getElementById("searchChatInput").value.toLowerCase();
-  renderChatListUI();
+  loadSidebar(false, false); // Berubah di sini
 }
 
 function setChatFilter(filter) {
@@ -271,7 +280,7 @@ function setChatFilter(filter) {
      activeBtn.classList.remove('bg-gray-100', 'dark:bg-gray-700', 'text-gray-500', 'dark:text-gray-300');
      activeBtn.classList.add('bg-green-500', 'text-white');
   }
-  renderChatListUI();
+  loadSidebar(false, false); // Berubah di sini
 }
 
 //Toogle Resolve Chat
@@ -300,8 +309,14 @@ function setChatFilter(filter) {
     const data = await res.json();
     if(!res.ok || data.error) throw new Error(data.error || "Gagal server");
 
-    // 🔥 Setelah berhasil di API, baru panggil load untuk update UI
+    // 🔥 INSTANT UPDATE UI
+    if (processedChatMap[selected]) {
+        processedChatMap[selected].is_closed = (newStatus === 1);
+    }
+
     await load();
+    await loadSidebar(false, false);
+    renderChatListUI();
     
   } catch (err) {
     console.error("RESOLVE ERROR:", err);
@@ -668,20 +683,37 @@ async function init(){
     showDashboard();
   }
 
-  await load();
-
-  const chatBoxEl = document.getElementById("chatBox");
-  if(chatBoxEl) {
-      chatBoxEl.addEventListener("scroll", () => {
-        const threshold = 100;
-        const isNearBottom = chatBoxEl.scrollHeight - chatBoxEl.scrollTop - chatBoxEl.clientHeight < threshold;
-        isUserScrollingUp = !isNearBottom;
+  // 🔥 EVENT LISTENER PAGINATION
+  const chatListContainer = document.getElementById("chatList");
+  if (chatListContainer) {
+      chatListContainer.addEventListener("scroll", () => {
+          if (chatListContainer.scrollTop + chatListContainer.clientHeight >= chatListContainer.scrollHeight - 50) {
+              loadSidebar(true, false); 
+          }
       });
   }
 
-  LAST_ASSIGNED_IDS = ALL_MESSAGES.filter(m => m && m.assigned_to===EMAIL).map(m=>m.id);
+  const chatBoxContainer = document.getElementById("chatBox");
+  if (chatBoxContainer) {
+      chatBoxContainer.addEventListener("scroll", () => {
+          const threshold = 100;
+          isUserScrollingUp = (chatBoxContainer.scrollHeight - chatBoxContainer.scrollTop - chatBoxContainer.clientHeight) >= threshold;
 
-  setInterval(load, 2000);
+          // Infinite Scroll Bubble Chat
+          if (chatBoxContainer.scrollTop <= 10 && hasMoreHistory && !isFetchingHistory && CURRENT_ROOM_MESSAGES.length > 0) {
+              const oldestMsgId = CURRENT_ROOM_MESSAGES[0].id;
+              fetchChatHistory(selected, oldestMsgId);
+          }
+      });
+  }
+
+  // Load awal via Pagination API
+  await loadSidebar(false, false);
+  
+  // Polling Terpisah: Tengah (3s), Sidebar (10s)
+  loadInterval = setInterval(load, 3000);
+  setInterval(() => loadSidebar(false, true), 10000);
+
   setTimeout(setupEmoji, 500);
 }
 
@@ -721,7 +753,6 @@ function showMessage(){
 
 // ================= STATISTIK FIX (SINKRON DENGAN DATABASE) =================
 function renderDashboardStats(){
-  // 🛡️ ANTI CRASH: Jika CLIENT belum selesai loading, stop di sini!
   if(!CLIENT) return; 
 
   let incoming = 0;
@@ -729,44 +760,34 @@ function renderDashboardStats(){
   let resolvedCount = 0;
   let activeUsers = 0;
 
-  // 1. Hitung Pesan Masuk & Keluar khusus agent ini
-  ALL_MESSAGES.forEach(m => {
-    if(m.assigned_to !== EMAIL) return;
-    if(m.direction === "incoming") incoming++;
-    if(m.direction === "outgoing") outgoing++;
-  });
-
-  // 2. 🔥 FIX: Hitung Active & Resolved langsung dari Map Database (Bukan LocalStorage lagi)
   Object.values(processedChatMap).forEach(c => {
-     if(c.is_closed) {
-         resolvedCount++;
-     } else {
-         activeUsers++;
-     }
+     // Lewati chat yang dipegang agent lain
+     if (c.assigned_to && c.assigned_to !== EMAIL) return;
+
+     if(c.is_closed) resolvedCount++;
+     else activeUsers++;
+     
+     if (c.is_last_out) outgoing++;
+     else incoming++;
   });
 
   const total = incoming + outgoing;
 
   const totalEl = document.getElementById("totalChat");
   if(totalEl) totalEl.innerText = total;
-  
   const incomingEl = document.getElementById("incomingChat");
   if(incomingEl) incomingEl.innerText = incoming;
-  
   const outgoingEl = document.getElementById("outgoingChat");
   if(outgoingEl) outgoingEl.innerText = outgoing;
-  
   const resolvedEl = document.getElementById("resolvedChat");
   if(resolvedEl) resolvedEl.innerText = resolvedCount;
 
-  // 🔥 FIX CHART MENGHILANG & UPDATE
   const dashboardView = document.getElementById("dashboardView");
   if(dashboardView && !dashboardView.classList.contains("hidden")) {
       const ctx = document.getElementById("chart");
       if(ctx) {
           const existingChart = Chart.getChart(ctx);
           if (existingChart) existingChart.destroy();
-          
           new Chart(ctx, {
             type: 'bar',
             data: {
@@ -774,252 +795,123 @@ function renderDashboardStats(){
               datasets: [{
                 label: 'Statistik Agent',
                 data: [incoming, outgoing, activeUsers, resolvedCount],
-                backgroundColor: [
-                  'rgba(16, 185, 129, 0.8)', 
-                  'rgba(245, 158, 11, 0.8)', 
-                  'rgba(59, 130, 246, 0.8)', 
-                  'rgba(107, 114, 128, 0.8)'  
-                ]
+                backgroundColor: ['rgba(16, 185, 129, 0.8)', 'rgba(245, 158, 11, 0.8)', 'rgba(59, 130, 246, 0.8)', 'rgba(107, 114, 128, 0.8)']
               }]
             },
-            options: {
-              responsive: true,
-              maintainAspectRatio: false
-            }
+            options: { responsive: true, maintainAspectRatio: false }
           });
       }
   }
 }
   
-// ================= LOAD DATA (VERSI FINAL & STABIL) =================
-async function load(){
-  if(!CLIENT) return;
+// 1. FUNGSI LOAD SIDEBAR (API CONVERSATIONS)
+async function loadSidebar(isAppend = false, isPolling = false) {
+    if (isFetchingChat) return;
 
-  try {
-    const res = await fetch(API+"/messages",{headers:{"client-id":CID}});
-    const dataRaw = await res.json();
-    if(!Array.isArray(dataRaw)) return;
+    const statusParam = `&status=${activeChatFilter}`; 
+    const searchParam = `&search=${encodeURIComponent(chatSearchQuery)}`;
+    let currentFetchOffset = isAppend ? chatOffset : 0;
     
-    // 🔥 PENTING: Urutkan dari ID terkecil ke terbesar 
-    // supaya pesan terbaru diproses terakhir dan menjadi status final di map
-    ALL_MESSAGES = dataRaw.sort((a, b) => a.id - b.id);
-    
-  } catch(e) {
-    console.error("Gagal load messages", e);
-    return;
-  }
-
-  // POPUP ASSIGN BARU 
-  if(LAST_ASSIGNED_IDS.length > 0){
-    const currentAssigned = ALL_MESSAGES.filter(m => m && m.assigned_to === EMAIL).map(m => m.id);
-    const newAssigned = currentAssigned.filter(id => !LAST_ASSIGNED_IDS.includes(id));
-    if(newAssigned.length > 0) showAssignPopup();
-    LAST_ASSIGNED_IDS = currentAssigned;
-  }
-
-  const map = {};
-
-  // 🔥 PERBAIKAN FATAL 1: Kumpulkan daftar user milik Agen ini dulu
-  // Biar pesan Chatbot/System (yang tidak ada tag assigned) tidak hilang!
-  const myUsers = new Set();
-  ALL_MESSAGES.forEach(m => {
-      if (m.assigned_to === EMAIL) {
-          const isOut = (m.sender === CLIENT.sender || m.sender === EMAIL || m.direction === "outgoing");
-          const user = isOut ? m.receiver : m.sender;
-          if (user) myUsers.add(user);
-      }
-  });
-
-  // 🔥 PERBAIKAN FATAL 2: Render Map List HANYA untuk myUsers (Bot & Flow ikut masuk!)
-  ALL_MESSAGES.forEach(m => {
-    const isOutgoing = (m.sender === CLIENT.sender || m.sender === EMAIL || m.direction === "outgoing");
-    const user = isOutgoing ? m.receiver : m.sender;
-    
-    // Skip chat milik agen lain (Hanya user yang ada di myUsers)
-    if(!user || !myUsers.has(user)) return; 
-
-    let safeName = m.name;
-    if(!safeName || safeName === "Unknown") {
-        safeName = "User " + user.slice(-4);
+    if (!isAppend && !isPolling) {
+        processedChatMap = {}; 
+        chatOffset = 0; 
     }
 
-    const dbClosedStatus = (m.is_closed == 1);
-    
-    // 🔥 PERBAIKAN FATAL 3: Bikin Teks Flow/Bot cantik di Sidebar (Kiri)
-    let displayMsg = m.message || (m.type && m.type !== 'text' ? `[${m.type.toUpperCase()}]` : '[Media]');
-    if (typeof displayMsg === "string") {
-        if (displayMsg.includes("[Flow Submit]")) {
-            displayMsg = "📋 Mengisi Form/Flow";
-        } else if (displayMsg.includes("[Button Click]")) {
-            displayMsg = "↩️ " + displayMsg.replace("[Button Click]", "").trim();
-        } else if (m.type === "template") {
-            displayMsg = "🤖 " + displayMsg; 
+    isFetchingChat = true;
+    try {
+        let fetchOffset = isPolling ? 0 : currentFetchOffset;
+        const res = await fetch(`${API}/conversations?limit=50&offset=${fetchOffset}${statusParam}${searchParam}`, { headers: { "client-id": CID } });
+        const data = await res.json();
+        
+        if (Array.isArray(data) && data.length > 0) {
+            // Cek Assign Baru
+            const newAssignments = data.filter(c => c.assigned_to === EMAIL).map(c => c.number);
+            const newlyAssigned = newAssignments.filter(num => !LAST_ASSIGNED_CACHE.includes(num));
+            if (newlyAssigned.length > 0 && isPolling) showAssignPopup();
+            LAST_ASSIGNED_CACHE = newAssignments;
+
+            data.forEach(c => {
+                let finalName = c.name;
+                if (!finalName || finalName.trim() === "" || finalName.toLowerCase().startsWith("user")) {
+                    finalName = CONTACT_REGISTRY[c.number] || ("User " + c.number.slice(-4));
+                } else if (CONTACT_REGISTRY[c.number] !== finalName) {
+                    CONTACT_REGISTRY[c.number] = finalName;
+                    saveRegistry(); 
+                }
+
+                let displayMsg = c.last_message || (c.type && c.type !== 'text' ? `[${c.type.toUpperCase()}]` : '[Media]');
+                if (typeof displayMsg === "string") {
+                    if (displayMsg.includes("[Flow Submit]")) displayMsg = "📋 Mengisi Form/Flow";
+                    else if (displayMsg.includes("[Button Click]")) displayMsg = "↩️ " + displayMsg.replace("[Button Click]", "").trim();
+                    else if (c.type === "template") displayMsg = "🤖 " + displayMsg; 
+                }
+
+                processedChatMap[c.number] = {
+                    number: c.number, name: finalName, last_message: displayMsg,
+                    last_time: c.timestamp, last_status: c.status, is_last_out: (c.direction === "outgoing"),
+                    is_unassigned: !c.assigned_to, is_unread: (c.direction !== "outgoing"),
+                    is_closed: (c.is_closed == 1), assigned_to: c.assigned_to
+                };
+            });
+
+            if (isAppend) chatOffset += 50; 
+            else if (chatOffset === 0 && !isPolling) chatOffset = 50;
+
+            renderChatListUI();
+            if (document.getElementById("dashboardView").classList.contains("hidden") === false) renderDashboardStats();
+            
+            if (selected && processedChatMap[selected]) {
+                const chatNameEl = document.getElementById("chatName");
+                if (chatNameEl) chatNameEl.innerText = processedChatMap[selected].name;
+            }
         }
-    }
-
-    if(!map[user]){
-      map[user]={
-        number: user,
-        name: safeName,
-        last_message: displayMsg,
-        last_time: m.timestamp,
-        last_status: m.status,
-        is_last_out: isOutgoing, 
-        is_unread: (!isOutgoing), 
-        is_closed: dbClosedStatus 
-      };
-    } else {
-      // Update nama jika ada yang valid
-      if (m.name && m.name !== "Unknown" && !m.name.startsWith("User ")) {
-          map[user].name = m.name;
-      }
-      map[user].last_message = displayMsg;
-      map[user].last_time = m.timestamp;
-      map[user].last_status = m.status;
-      map[user].is_last_out = isOutgoing;
-      map[user].is_closed = dbClosedStatus; 
-      
-      // AUTO REOPEN & UNREAD SYNC
-      if (!isOutgoing) {
-          map[user].is_unread = true;
-          map[user].is_closed = false; 
-      } else {
-          map[user].is_unread = false;
-      }
-    }
-  });
-
-  processedChatMap = map;
-  renderChatListUI();
-  renderDashboardStats();
-
-  // Update tampilan chat yang sedang dibuka agar tombol Resolve/Reopen sinkron
-  if(selected && processedChatMap[selected]){
-    const current = processedChatMap[selected];
-    const btnResolve = document.getElementById("btnResolve");
-    const chatInputArea = document.getElementById("chatInputArea");
-    const resolvedBanner = document.getElementById("resolvedBanner");
-
-    if(current.is_closed){
-        if(btnResolve) {
-          btnResolve.innerHTML = "🔄 Reopen Chat";
-          btnResolve.classList.replace("text-green-600", "text-gray-500");
-        }
-        resolvedBanner?.classList.remove("hidden");
-        chatInputArea?.classList.add("hidden");
-        chatInputArea?.classList.remove("flex");
-    } else {
-        if(btnResolve) {
-          btnResolve.innerHTML = "✅ Resolve";
-          btnResolve.classList.replace("text-gray-500", "text-green-600");
-        }
-        resolvedBanner?.classList.add("hidden");
-        chatInputArea?.classList.remove("hidden");
-        chatInputArea?.classList.add("flex");
-    }
-
-    // FIX AUTO MUNCUL AGENT: Update chat history otomatis tanpa refresh
-    const filtered = ALL_MESSAGES.filter(m => m && (m.sender === selected || m.receiver === selected));
-    const currentIds = filtered.map(x => x.id + "-" + x.status).join("|");
-    
-    if (currentIds !== LAST_RENDER_IDS) {
-        LAST_RENDER_IDS = currentIds;
-        const chatBoxEl = document.getElementById("chatBox");
-        if (chatBoxEl) {
-            const html = filtered.map(m => renderBubble(m)).join('');
-            LAST_RENDER_HTML = html;
-            chatBoxEl.innerHTML = html;
-            setTimeout(() => {
-                if (!isUserScrollingUp) chatBoxEl.scrollTop = chatBoxEl.scrollHeight;
-            }, 100);
-        }
-    }
-  }
-
-  // Handle auto-open last chat jika diperlukan
-  const lastChat = JSON.parse(localStorage.getItem("agent_last_chat") || "null");
-  if(lastChat && !selected){
-    const found = map[lastChat.number];
-    if(found) openChat(found.number, found.name);
-    else localStorage.removeItem("agent_last_chat");
-  }
+    } catch(e) { console.error("Gagal load sidebar:", e); } 
+    finally { isFetchingChat = false; }
 }
 
-// ================= RENDER CHAT LIST (FIX MIRRORING & DATABASE SYNC) =================
+// 2. FUNGSI RENDER LIST (LOGIKA FILTER AGENT)
 function renderChatListUI() {
   const chatListEl = document.getElementById("chatList");
   if (!chatListEl) return;
 
   let list = Object.values(processedChatMap);
 
-  // 🔥 1. FITUR AUTO-REOPEN & SYNC
-  // Kita tidak perlu lagi memanipulasi localStorage di sini.
-  // Logika Auto-Reopen sudah ditangani di fungsi load() 
-  // (Jika ada is_unread dari database, maka is_closed otomatis dianggap false).
-
-  // 🔥 2. HITUNG BADGE RESOLVED DARI DATABASE
-  // Menghitung berapa banyak chat yang status is_closed-nya bernilai true
-  let resolvedCount = list.filter(c => c.is_closed).length;
-
-  const badge = document.getElementById("resolvedBadge");
-  if(badge){
-     if(resolvedCount > 0){
-        badge.innerText = resolvedCount;
-        badge.classList.remove("hidden");
-        // Tetap warna abu-abu sesuai permintaan kamu
-        badge.classList.remove("bg-red-500");
-        badge.classList.add("bg-gray-500"); 
-     } else {
-        badge.classList.add("hidden");
-     }
-  }
-
-  // 🔥 3. FILTERING TAB LIST BERDASARKAN DATABASE
+  // LOGIKA AGENT: Cuma chat miliknya atau yg unassigned
   list = list.filter(c => {
-      // Jika tab yang dipilih adalah 'resolved', tampilkan yang is_closed: true
+      if (c.assigned_to && c.assigned_to !== EMAIL) return false;
       if (activeChatFilter === 'resolved') return c.is_closed;
-      
-      // Jika tab 'all' atau 'unread', jangan tampilkan chat yang sudah ditutup (closed)
       if (c.is_closed) return false; 
-      
+      if (activeChatFilter === 'unassigned') return !c.assigned_to;
       if (activeChatFilter === 'unread') return c.is_unread;
       return true;
   });
 
-  // 4. FILTER SEARCH BAR (Fitur tetap jalan)
-  if (chatSearchQuery) {
-    list = list.filter(c => 
-      c.name.toLowerCase().includes(chatSearchQuery) || 
-      c.number.includes(chatSearchQuery)
-    );
+  let resolvedCount = Object.values(processedChatMap).filter(c => c.is_closed && (c.assigned_to === EMAIL || !c.assigned_to)).length;
+  const badge = document.getElementById("resolvedBadge");
+  if(badge){
+     if(resolvedCount > 0){
+        badge.innerText = resolvedCount; badge.classList.remove("hidden");
+        badge.classList.remove("bg-red-500"); badge.classList.add("bg-gray-500"); 
+     } else { badge.classList.add("hidden"); }
   }
 
-  // Urutkan berdasarkan waktu terbaru
+  if (chatSearchQuery) {
+    list = list.filter(c => c.name.toLowerCase().includes(chatSearchQuery) || c.number.includes(chatSearchQuery));
+  }
+
   list.sort((a, b) => new Date(b.last_time.replace(" ","T")) - new Date(a.last_time.replace(" ","T")));
 
- // 5. Render ke HTML
   chatListEl.innerHTML = list.map(c => {
       const nameClass = c.is_unread ? "font-extrabold text-black dark:text-white" : "font-semibold text-gray-800 dark:text-gray-200";
       const msgClass = c.is_unread ? "font-bold text-gray-800 dark:text-gray-300" : "font-normal text-gray-500 dark:text-gray-400";
-      
-      let safeMsg = c.last_message || 'File/Media';
-      safeMsg = String(safeMsg).replace(/<[^>]*>?/gm, '').replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      let safeMsg = String(c.last_message || 'File/Media').replace(/<[^>]*>?/gm, '').replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-      // 🔥 LOGIKA ICON STATUS SINKRON
       let listStatusIcon = "";
-      
-      // Hanya munculkan icon centang/silang jika pesan terakhir kita yang kirim (is_last_out)
       if (c.is_last_out) {
-          if (c.last_status === "failed") {
-              listStatusIcon = `<span class="text-red-500 text-[11px]">❌</span>`;
-          } else if (c.last_status === "read") {
-              listStatusIcon = `<span class="text-[#53bdeb] text-[11px] font-bold">✓✓</span>`;
-          } else if (c.last_status === "delivered") {
-              listStatusIcon = `<span class="text-gray-400 text-[11px]">✓✓</span>`;
-          } else {
-              // Default untuk sent atau pending
-              listStatusIcon = `<span class="text-gray-400 text-[11px]">✓</span>`;
-          }
+          if (c.last_status === "failed") listStatusIcon = `<span class="text-red-500 text-[11px]">❌</span>`;
+          else if (c.last_status === "read") listStatusIcon = `<span class="text-[#53bdeb] text-[11px] font-bold">✓✓</span>`;
+          else if (c.last_status === "delivered") listStatusIcon = `<span class="text-gray-400 text-[11px]">✓✓</span>`;
+          else listStatusIcon = `<span class="text-gray-400 text-[11px]">✓</span>`;
       }
 
       return `
@@ -1034,96 +926,127 @@ function renderChatListUI() {
              <h3 class="${nameClass} text-[15px] truncate mr-2">${c.name}</h3>
              <span class="text-[11px] ${c.is_unread ? 'text-green-500 font-bold' : 'text-gray-400'} whitespace-nowrap">${formatTimeShort(c.last_time)}</span>
            </div>
-           <p class="${msgClass} text-[13px] truncate flex items-center gap-1">
-              ${listStatusIcon} ${safeMsg}
-           </p>
+           <p class="${msgClass} text-[13px] truncate flex items-center gap-1">${listStatusIcon} ${safeMsg}</p>
         </div>
-      </div>
-  `}).join('');
+      </div>`
+  }).join('');
+  if(list.length === 0) chatListEl.innerHTML = `<div class="p-6 text-center text-xs text-gray-400 italic">Tidak ada percakapan.</div>`;
+}
 
-  if(list.length === 0) {
-      chatListEl.innerHTML = `<div class="p-6 text-center text-xs text-gray-400 italic">Tidak ada percakapan.</div>`;
-  }
+// 3. FUNGSI LOAD POLLING (Tarik pesan chat aktif saja)
+async function load(){
+  if(!CLIENT || !selected) return;
+  try {
+    const res = await fetch(`${API}/messages?target=${selected}&limit=50`, { headers: { "client-id": CID } });
+    const dataRaw = await res.json();
+    if(!Array.isArray(dataRaw)) return;
+
+    const sortedData = dataRaw.sort((a, b) => a.id - b.id);
+    const newMessages = sortedData.filter(m => !CURRENT_ROOM_MESSAGES.some(existing => existing.id === m.id));
+
+    let isStatusChanged = false;
+    sortedData.forEach(m => {
+        const existing = CURRENT_ROOM_MESSAGES.find(x => x.id === m.id);
+        if (existing && existing.status !== m.status) {
+            existing.status = m.status; isStatusChanged = true;
+        }
+    });
+
+    if (newMessages.length > 0) {
+        CURRENT_ROOM_MESSAGES = [...CURRENT_ROOM_MESSAGES, ...newMessages];
+        renderBubbleBox();
+        const chatBoxEl = document.getElementById("chatBox");
+        setTimeout(() => { if (!isUserScrollingUp) chatBoxEl.scrollTo({ top: chatBoxEl.scrollHeight, behavior: "smooth" }); }, 100);
+    } else if (isStatusChanged) { renderBubbleBox(); }
+
+    const isResolved = processedChatMap[selected]?.is_closed;
+    const btnResolve = document.getElementById("btnResolve");
+    const chatInputArea = document.getElementById("chatInputArea");
+    const resolvedBanner = document.getElementById("resolvedBanner");
+
+    if (isResolved) {
+      if(btnResolve) { btnResolve.innerHTML = "🔄 Reopen Chat"; btnResolve.classList.replace("text-green-600", "text-gray-500"); btnResolve.classList.replace("border-green-200", "border-gray-200"); }
+      if (resolvedBanner) resolvedBanner.classList.remove("hidden");
+      if (chatInputArea) { chatInputArea.classList.add("hidden"); chatInputArea.classList.remove("flex"); }
+    } else {
+      if(btnResolve) { btnResolve.innerHTML = "✅ Resolve"; btnResolve.classList.replace("text-gray-500", "text-green-600"); btnResolve.classList.replace("border-gray-200", "border-green-200"); }
+      if (resolvedBanner) resolvedBanner.classList.add("hidden");
+      if (chatInputArea) { chatInputArea.classList.remove("hidden"); chatInputArea.classList.add("flex"); }
+    }
+  } catch(e) { console.error("Gagal auto-refresh chat:", e); }
 }
 
 // ================= OPEN CHAT (FIX HISTORY KOSONG) =================
-function openChat(num, name) {
+async function openChat(num, name) {
   if (!num) return;
   selected = num;
   localStorage.setItem("agent_last_chat", JSON.stringify({ number: num, name: name }));
 
-  const emptyState = document.getElementById("emptyState");
-  const chatContent = document.getElementById("chatContent");
-  if (emptyState) emptyState.classList.add("hidden");
-  if (chatContent) chatContent.classList.remove("hidden");
+  document.getElementById("emptyState")?.classList.add("hidden");
+  document.getElementById("chatContent")?.classList.remove("hidden");
 
-  const chatNameEl = document.getElementById("chatName");
-  const chatNumberEl = document.getElementById("chatNumber");
-  const avatarEl = document.getElementById("avatar");
+  const realName = CONTACT_REGISTRY[num] || processedChatMap[num]?.name || name;
+  document.getElementById("chatName").innerText = realName;
+  document.getElementById("chatNumber").innerText = num;
+  document.getElementById("avatar").src = "https://ui-avatars.com/api/?name=" + encodeURIComponent(realName) + "&background=random&color=fff";
 
-  if (chatNameEl) chatNameEl.innerText = name || "User";
-  if (chatNumberEl) chatNumberEl.innerText = num;
-  if (avatarEl) avatarEl.src = "https://ui-avatars.com/api/?name=" + encodeURIComponent(name || "User") + "&background=random&color=fff";
+  CURRENT_ROOM_MESSAGES = [];
+  hasMoreHistory = true;
+  LAST_RENDER_IDS = "";
+  
+  const chatBoxEl = document.getElementById("chatBox");
+  if(chatBoxEl) chatBoxEl.innerHTML = `<div class="text-center text-xs text-gray-500 mt-10">Memuat riwayat percakapan...</div>`;
+  
+  await fetchChatHistory(num, null);
+}
 
-  const btnResolve = document.getElementById("btnResolve");
-  const chatInputArea = document.getElementById("chatInputArea");
-  const resolvedBanner = document.getElementById("resolvedBanner");
-  const resolvedArr = JSON.parse(localStorage.getItem('resolved_chats') || '[]');
-  const isResolved = processedChatMap[num]?.is_closed;
+async function fetchChatHistory(num, lastId = null) {
+    if (isFetchingHistory || !hasMoreHistory) return;
+    isFetchingHistory = true;
 
-  // UBAH TOMBOL & BANNER RESOLVE
-  if (isResolved) {
-    if(btnResolve) {
-        btnResolve.innerHTML = "🔄 Reopen Chat";
-        btnResolve.classList.replace("text-green-600", "text-gray-500");
-        btnResolve.classList.replace("border-green-200", "border-gray-200");
-    }
-    if (resolvedBanner) resolvedBanner.classList.remove("hidden");
-    if (chatInputArea) {
-      chatInputArea.classList.add("hidden");
-      chatInputArea.classList.remove("flex");
-    }
-  } else {
-    if(btnResolve) {
-        btnResolve.innerHTML = "✅ Resolve";
-        btnResolve.classList.replace("text-gray-500", "text-green-600");
-        btnResolve.classList.replace("border-gray-200", "border-green-200");
-    }
-    if (resolvedBanner) resolvedBanner.classList.add("hidden");
-    if (chatInputArea) {
-      chatInputArea.classList.remove("hidden");
-      chatInputArea.classList.add("flex");
-    }
-  }
+    let url = `${API}/messages?target=${num}&limit=50`;
+    if (lastId) url += `&last_id=${lastId}`;
 
-  try {
-    // 🔥 SUPER AMAN: Tarik semua riwayat obrolan dengan nomor ini tanpa filter aneh-aneh!
-    const html = ALL_MESSAGES
-      .filter(m => m && (m.sender === num || m.receiver === num))
-      .map(m => renderBubble(m))
-      .join('');
+    try {
+        const res = await fetch(url, { headers: { "client-id": CID } });
+        const data = await res.json();
 
-    if (html !== LAST_RENDER_HTML) {
-      LAST_RENDER_HTML = html;
-      const chatBoxEl = document.getElementById("chatBox");
-      if (chatBoxEl) {
-        chatBoxEl.innerHTML = html;
-        setTimeout(() => {
-          if (!isUserScrollingUp) chatBoxEl.scrollTop = chatBoxEl.scrollHeight;
-        }, 100);
-      }
-    }
-  } catch (err) {
-    console.error("Error merender history chat:", err);
-  }
+        if (!Array.isArray(data) || data.length < 50) hasMoreHistory = false; 
 
-  const msgEl = document.getElementById("msg");
-  const sendBtnEl = document.getElementById("sendBtn");
-  if (msgEl) msgEl.disabled = false;
-  if (sendBtnEl) {
-    sendBtnEl.disabled = false;
-    sendBtnEl.innerText = "Send";
-  }
+        const sortedData = data.sort((a, b) => a.id - b.id);
+        const chatBoxEl = document.getElementById("chatBox");
+        let prevHeight = chatBoxEl ? chatBoxEl.scrollHeight : 0;
+
+        if (lastId) CURRENT_ROOM_MESSAGES = [...sortedData, ...CURRENT_ROOM_MESSAGES]; 
+        else CURRENT_ROOM_MESSAGES = sortedData; 
+
+        renderBubbleBox();
+
+        if (lastId && chatBoxEl) chatBoxEl.scrollTop = chatBoxEl.scrollHeight - prevHeight;
+        else if (chatBoxEl) chatBoxEl.scrollTo({ top: chatBoxEl.scrollHeight, behavior: "auto" });
+
+        const msgEl = document.getElementById("msg");
+        const sendBtnEl = document.getElementById("sendBtn");
+        if (msgEl) msgEl.disabled = false;
+        if (sendBtnEl) { sendBtnEl.disabled = false; sendBtnEl.innerText = "Send"; }
+    } catch (e) { console.error("Gagal load history:", e); } 
+    finally { isFetchingHistory = false; }
+}
+
+function renderBubbleBox() {
+    const chatBoxEl = document.getElementById("chatBox");
+    if(!chatBoxEl || !selected) return;
+
+    const currentIds = CURRENT_ROOM_MESSAGES.map(x => x.id + "-" + x.status).join("|");
+    if(currentIds === LAST_RENDER_IDS) return;
+    LAST_RENDER_IDS = currentIds;
+
+    let html = "";
+    if (hasMoreHistory) html += `<div class="text-center text-xs text-blue-500 py-3 font-semibold opacity-70">Memuat pesan sebelumnya...</div>`;
+    else if (CURRENT_ROOM_MESSAGES.length > 0) html += `<div class="text-center text-[11px] text-gray-400 py-4 border-b border-gray-100 dark:border-gray-700 mb-4">Awal percakapan</div>`;
+
+    html += CURRENT_ROOM_MESSAGES.map(renderBubble).join('');
+    chatBoxEl.innerHTML = html;
 }
 
 // ================= BUBBLE CHAT =================
