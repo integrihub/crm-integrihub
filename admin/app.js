@@ -14,6 +14,9 @@ let activeChatFilter = 'all';
 let chatSearchQuery = '';
 let processedChatMap = {};
 
+// 🔥 BUKU TELEPON PRIBADI (Tidak akan pernah di-reset)
+let CONTACT_REGISTRY = {};
+
 //PAGINATION MESSAGE
 let chatOffset = 0;
 let isFetchingChat = false;
@@ -676,6 +679,16 @@ async function load(){
 
     const sortedData = data.sort((a, b) => a.id - b.id);
 
+    // 🔥 UPDATE REGISTRY (Belajar nama user)
+sortedData.forEach(m => {
+    // Jika ada nama yang valid (bukan placeholder "User ...")
+    if (m.name && !m.name.toLowerCase().startsWith("user")) {
+        // Tentukan nomor user (karena pesan bisa incoming/outgoing)
+        const userNum = (m.sender === selected) ? m.sender : m.receiver;
+        CONTACT_REGISTRY[userNum] = m.name;
+    }
+});
+
     // 2. Filter pesan yang belum ada di state (pesan baru masuk)
     const newMessages = sortedData.filter(m => 
         !CURRENT_ROOM_MESSAGES.some(existing => existing.id === m.id)
@@ -842,19 +855,11 @@ function renderChatListUI() {
   }
 }
 
-// 🔥 FUNGSI LOAD SIDEBAR (DENGAN NAME PERSISTENCE)
 async function loadSidebar(append = false) {
     if (isFetchingChat) return;
 
-    // 1. Simpan nama yang sudah dikenal sebelum list di-reset
-    let nameCache = {};
+    // Tidak perlu lagi reset nameCache di sini, karena kita pakai CONTACT_REGISTRY yang global
     if (!append) {
-        Object.values(processedChatMap).forEach(c => {
-            // Hanya simpan nama yang bukan placeholder
-            if (c.name && !c.name.startsWith("User ")) {
-                nameCache[c.number] = c.name;
-            }
-        });
         chatOffset = 0;
         processedChatMap = {};
     }
@@ -868,14 +873,16 @@ async function loadSidebar(append = false) {
         
         if (Array.isArray(data) && data.length > 0) {
             data.forEach(c => {
-                // 2. Tentukan nama: Prioritas Nama API -> Nama dari Cache -> Default "User XXXX"
+                // 1. Tentukan nama: Prioritas Nama API -> Nama dari Registry -> Default "User XXXX"
                 let finalName = c.name;
+                const isPlaceholder = !finalName || finalName.trim() === "" || finalName.toLowerCase().startsWith("user");
                 
-                // Cek apakah API memberikan nama placeholder
-                const isPlaceholder = !finalName || finalName.trim() === "" || finalName.startsWith("User ");
-                
+                // Jika API kasih placeholder, ambil dari Registry
                 if (isPlaceholder) {
-                    finalName = nameCache[c.number] || ("User " + c.number.slice(-4));
+                    finalName = CONTACT_REGISTRY[c.number] || ("User " + c.number.slice(-4));
+                } else {
+                    // JIKA API KASIH NAMA VALID (Bukan User XXXX), SIMPAN KE REGISTRY!
+                    CONTACT_REGISTRY[c.number] = finalName;
                 }
 
                 let displayMsg = c.last_message || (c.type && c.type !== 'text' ? `[${c.type.toUpperCase()}]` : '[Media]');
@@ -887,7 +894,7 @@ async function loadSidebar(append = false) {
 
                 processedChatMap[c.number] = {
                     number: c.number,
-                    name: finalName, // Nama sudah aman sekarang
+                    name: finalName, 
                     last_message: displayMsg,
                     last_time: c.timestamp,
                     last_status: c.status,
@@ -901,7 +908,6 @@ async function loadSidebar(append = false) {
 
             renderChatListUI();
             
-            // Update Header Chat kalau lagi dibuka agar tetap sinkron
             if (selected && processedChatMap[selected]) {
                 const chatNameEl = document.getElementById("chatName");
                 if (chatNameEl) chatNameEl.innerText = processedChatMap[selected].name;
@@ -972,7 +978,7 @@ async function openChat(num, name){
   chatContentEl?.classList.remove("hidden");
 
   // Ambil nama valid dari Sidebar Memory
-  const realName = processedChatMap[num]?.name || name;
+  const realName = CONTACT_REGISTRY[num] || processedChatMap[num]?.name || name;
   chatNameEl.innerText = realName;
   chatNumberEl.innerText = num;
   avatarEl.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(realName)}&background=random&color=fff`;
