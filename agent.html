@@ -264,6 +264,13 @@ let isFetchingHistory = false;
 let hasMoreHistory = true;
 let LAST_ASSIGNED_CACHE = [];
 
+// 🔥 BUKU TELEPON PRIBADI (Pake LocalStorage biar awet saat refresh)
+let CONTACT_REGISTRY = JSON.parse(localStorage.getItem("contact_registry") || "{}");
+
+function saveRegistry() {
+    localStorage.setItem("contact_registry", JSON.stringify(CONTACT_REGISTRY));
+}
+
 function handleChatSearch() {
   chatSearchQuery = document.getElementById("searchChatInput").value.toLowerCase();
   loadSidebar(false, false); // Berubah di sini
