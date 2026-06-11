@@ -842,10 +842,17 @@ function renderChatListUI() {
   }
 }
 
-// 🔥 FUNGSI BARU: LOAD SIDEBAR (PAGINATION + FORMATTING)
+// 🔥 FUNGSI BARU: LOAD SIDEBAR (PAGINATION + FORMATTING + FIX NAMA)
 async function loadSidebar(append = false) {
     if (isFetchingChat) return;
-    if (!append) { chatOffset = 0; processedChatMap = {}; }
+    
+    // 🔥 FIX UTAMA: Simpan memori (map lama) supaya nama asli tidak hilang saat auto-refresh
+    let oldMap = {};
+    if (!append) { 
+        chatOffset = 0; 
+        oldMap = { ...processedChatMap }; 
+        processedChatMap = {}; 
+    }
 
     isFetchingChat = true;
     try {
@@ -856,9 +863,10 @@ async function loadSidebar(append = false) {
         
         if (Array.isArray(data) && data.length > 0) {
             data.forEach(c => {
-              const existingChat = processedChatMap[c.number] || {};
+                // Tarik ingatan dari data lama sebelum di-reset
+                const existingChat = oldMap[c.number] || processedChatMap[c.number] || {};
 
-                // 🔥 LOGIKA FORMATTING (Pindah dari load ke sini)
+                // LOGIKA FORMATTING PESAN TERAKHIR
                 let displayMsg = c.last_message || (c.type && c.type !== 'text' ? `[${c.type.toUpperCase()}]` : '[Media]');
                 if (typeof displayMsg === "string") {
                     if (displayMsg.includes("[Flow Submit]")) displayMsg = "📋 Mengisi Form/Flow";
@@ -866,22 +874,44 @@ async function loadSidebar(append = false) {
                     else if (c.type === "template") displayMsg = "🤖 " + displayMsg; 
                 }
 
+                // 🔥 LOGIKA FIX NAMA (Mencegah Reset Jadi User XXXX saat admin balas)
+                let finalName = c.name;
+                
+                // Jika nama dari server kosong/null/undefined ATAU hanya berisi kata "User...", 
+                // kita comot nama asli dari memori sebelumnya (oldMap)
+                if (!finalName || finalName.trim() === "" || finalName === c.number || finalName.startsWith("User ")) {
+                    if (existingChat.name && existingChat.name.trim() !== "" && !existingChat.name.startsWith("User ") && existingChat.name !== c.number) {
+                        finalName = existingChat.name;
+                    }
+                }
+
                 processedChatMap[c.number] = {
-        number: c.number,
-        // 🔥 FIX: Pakai nama lama jika nama dari API kosong
-        name: c.name || existingChat.name || "User " + c.number.slice(-4), 
-        last_message: displayMsg,
-        last_time: c.timestamp,
-        last_status: c.status,
-        is_last_out: (c.direction === "outgoing"),
-        is_unassigned: !c.assigned_to,
-        is_unread: (c.direction !== "outgoing"),
-        is_closed: (c.is_closed == 1),
-        assigned_to: c.assigned_to
-    };
-});
+                    number: c.number,
+                    // Gunakan finalName, jika masih kosong parah baru jatuh ke User XXXX
+                    name: finalName || existingChat.name || "User " + c.number.slice(-4), 
+                    last_message: displayMsg,
+                    last_time: c.timestamp,
+                    last_status: c.status,
+                    is_last_out: (c.direction === "outgoing"),
+                    is_unassigned: !c.assigned_to,
+                    is_unread: (c.direction !== "outgoing"),
+                    is_closed: (c.is_closed == 1),
+                    assigned_to: c.assigned_to
+                };
+            });
 
             renderChatListUI();
+            
+            // 🔥 SINKRONKAN JUGA KE HEADER KOTAK CHAT (TENGAH) JIKA SEDANG DIBUKA
+            if (selected && processedChatMap[selected]) {
+                const activeName = processedChatMap[selected].name;
+                const chatNameEl = document.getElementById("chatName");
+                // Update header kalau namanya sudah kembali menjadi nama yang valid
+                if (chatNameEl && chatNameEl.innerText !== activeName && !activeName.startsWith("User ")) {
+                    chatNameEl.innerText = activeName;
+                }
+            }
+
             chatOffset += 50; 
         }
     } catch(e) {
