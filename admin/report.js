@@ -20,28 +20,51 @@ let checkedBlastSet = new Set();
 let checkedQRSet = new Set();
 let checkedFlowSet = new Set();
 
+// 🔥 STATE PAGINATION UNTUK TIAP BOX
+const itemsPerPage = 25;
+let paginationState = {
+  users: { currentPage: 1, filterText: "" },
+  blast: { currentPage: 1, filterText: "" },
+  flow: { currentPage: 1, filterText: "" }
+};
+
+// 🔥 GANTI NAMA: changeReportPage (Agar tidak bentrok dengan changePage di app.js)
+function changeReportPage(type, direction) {
+  if (type === "users") {
+    paginationState.users.currentPage += direction;
+    renderUserCheckboxList();
+  } else if (type === "blast") {
+    paginationState.blast.currentPage += direction;
+    renderTemplateCheckboxList("blast");
+  } else if (type === "flow") {
+    paginationState.flow.currentPage += direction;
+    renderTemplateCheckboxList("flow");
+  }
+}
+
 async function initReportDashboard() {
   await loadTemplatesForReport();
   await loadUsersForReport();
   
   // Event listener search User
   document.getElementById("chatSearch")?.addEventListener("input", function() {
-    renderUserCheckboxList(this.value.toLowerCase());
+    paginationState.users.filterText = this.value.toLowerCase();
+    paginationState.users.currentPage = 1; // Reset ke halaman 1 saat search
+    renderUserCheckboxList();
   });
 
   // Event listener search Template Blast
   document.getElementById("blastSearchInput")?.addEventListener("input", function() {
-    renderTemplateCheckboxList("blast", this.value.toLowerCase());
+    paginationState.blast.filterText = this.value.toLowerCase();
+    paginationState.blast.currentPage = 1;
+    renderTemplateCheckboxList("blast");
   });
-
-  // Event listener search Template QR
-  //document.getElementById("qrSearchInput")?.addEventListener("input", function() {
-    //renderTemplateCheckboxList("qr", this.value.toLowerCase());
-  //});
 
   // Event listener search Template Flow
   document.getElementById("flowSearchInput")?.addEventListener("input", function() {
-    renderTemplateCheckboxList("flow", this.value.toLowerCase());
+    paginationState.flow.filterText = this.value.toLowerCase();
+    paginationState.flow.currentPage = 1;
+    renderTemplateCheckboxList("flow");
   });
 }
 
@@ -92,40 +115,76 @@ async function loadTemplatesForReport() {
   } catch(e) { console.log("Gagal load canned for report", e); }
 
     // Render ke HTML
-    renderTemplateCheckboxList("blast", "");
-    //renderTemplateCheckboxList("qr", "");
-    renderTemplateCheckboxList("flow", "");
+    renderTemplateCheckboxList("blast");
+    renderTemplateCheckboxList("flow");
 
   } catch(e) { console.error("Gagal load template report", e); }
 }
 
 // RENDER CHECKBOX TEMPLATE
-function renderTemplateCheckboxList(type, filterText) {
+function renderTemplateCheckboxList(type) {
   let masterList = [];
   let targetListId = "";
   let memorySet = null;
+  let state = null;
+  let masterCheckId = "";
 
-  if (type === "blast") { masterList = allBlastTemplates; targetListId = "blastCheckboxList"; memorySet = checkedBlastSet; }
-  else if (type === "qr") { masterList = allQRTemplates; targetListId = "qrCheckboxList"; memorySet = checkedQRSet; }
-  else if (type === "flow") { masterList = allFlowTemplates; targetListId = "flowCheckboxList"; memorySet = checkedFlowSet; }
+  if (type === "blast") { masterList = allBlastTemplates; targetListId = "blastCheckboxList"; memorySet = checkedBlastSet; state = paginationState.blast; masterCheckId = "selectAllBlast"; }
+  else if (type === "flow") { masterList = allFlowTemplates; targetListId = "flowCheckboxList"; memorySet = checkedFlowSet; state = paginationState.flow; masterCheckId = "selectAllFlow"; }
+  else return; // QR tidak dipakai
 
-  const listEl = document.getElementById(targetListId);
-  if (!listEl) return;
+  const listContainer = document.getElementById(targetListId);
+  if (!listContainer) return;
 
-  const filtered = masterList.filter(name => name.toLowerCase().includes(filterText));
+  // Hapus pagination lama
+  const existingPagination = listContainer.parentElement.querySelector(".pagination-container");
+  if(existingPagination) existingPagination.remove();
 
-  listEl.innerHTML = filtered.map(name => {
-    const isChecked = memorySet.has(name) ? "checked" : "";
-    return `
-      <label class="block p-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-sm border-b dark:border-gray-600 truncate">
-        <input type="checkbox" value="${name}" onchange="toggleSingleTemplate('${type}', this)" class="mr-2" ${isChecked}> 
-        ${name}
-      </label>
-    `;
-  }).join('');
+  // Filter
+  const filtered = masterList.filter(name => name.toLowerCase().includes(state.filterText));
+
+  // Logika Pagination
+  const totalItems = filtered.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+  if (state.currentPage > totalPages) state.currentPage = totalPages;
+  if (state.currentPage < 1) state.currentPage = 1;
+
+  const startIndex = (state.currentPage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+  const pageData = filtered.slice(startIndex, endIndex);
+
+  const isAllChecked = (filtered.length > 0 && filtered.every(name => memorySet.has(name))) ? "checked" : "";
+  let html = `
+    <label class="block p-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer font-bold border-b-2 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-sm">
+      <input type="checkbox" id="${masterCheckId}" onchange="toggleAllTemplates('${type}')" class="mr-2" ${isAllChecked}> Pilih Semua Template Terfilter
+    </label>
+  `;
 
   if (filtered.length === 0) {
-    listEl.innerHTML = `<div class="p-3 text-center text-xs text-gray-400">Tidak ada template</div>`;
+    html += `<div class="p-3 text-center text-xs text-gray-400">Tidak ada template</div>`;
+  } else {
+    html += pageData.map(name => {
+      const isChecked = memorySet.has(name) ? "checked" : "";
+      return `
+        <label class="block p-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-sm border-b dark:border-gray-600 truncate">
+          <input type="checkbox" value="${name}" onchange="toggleSingleTemplate('${type}', this)" class="mr-2" ${isChecked}> 
+          ${name}
+        </label>
+      `;
+    }).join('');
+  }
+
+  listContainer.innerHTML = html;
+
+  if (totalPages > 1) {
+    const paginationHtml = `
+      <div class="pagination-container flex items-center justify-between p-2 text-xs border-t dark:border-gray-600 bg-gray-50 dark:bg-gray-800">
+        <button onclick="changeReportPage('${type}', -1)" class="px-2 py-1 bg-white dark:bg-gray-700 border rounded shadow-sm disabled:opacity-30" ${state.currentPage === 1 ? 'disabled' : ''}>&lsaquo; Prev</button>
+        <span class="text-gray-500 font-medium">${startIndex + 1}-${endIndex} dari ${totalItems}</span>
+        <button onclick="changeReportPage('${type}', 1)" class="px-2 py-1 bg-white dark:bg-gray-700 border rounded shadow-sm disabled:opacity-30" ${state.currentPage === totalPages ? 'disabled' : ''}>Next &rsaquo;</button>
+      </div>
+    `;
+    listContainer.insertAdjacentHTML("afterend", paginationHtml);
   }
 }
 
@@ -145,20 +204,23 @@ function toggleSingleTemplate(type, checkbox) {
 
 // TOGGLE ALL TEMPLATE
 function toggleAllTemplates(type) {
-  let masterCheckId = "", listId = "", memorySet = null;
+  let masterCheckId = "", state = null, masterList = [], memorySet = null;
 
-  if (type === "blast") { masterCheckId = "selectAllBlast"; listId = "blastCheckboxList"; memorySet = checkedBlastSet; }
-  else if (type === "qr") { masterCheckId = "selectAllQR"; listId = "qrCheckboxList"; memorySet = checkedQRSet; }
-  else if (type === "flow") { masterCheckId = "selectAllFlow"; listId = "flowCheckboxList"; memorySet = checkedFlowSet; }
+  if (type === "blast") { masterCheckId = "selectAllBlast"; state = paginationState.blast; masterList = allBlastTemplates; memorySet = checkedBlastSet; }
+  else if (type === "flow") { masterCheckId = "selectAllFlow"; state = paginationState.flow; masterList = allFlowTemplates; memorySet = checkedFlowSet; }
+  else return;
 
   const isChecked = document.getElementById(masterCheckId).checked;
-  const checkboxes = document.querySelectorAll(`#${listId} input[type='checkbox']`);
+  const filtered = masterList.filter(name => name.toLowerCase().includes(state.filterText));
   
-  checkboxes.forEach(cb => {
-    cb.checked = isChecked;
-    if (isChecked) memorySet.add(cb.value);
-    else memorySet.delete(cb.value);
+  // Menandai semua data hasil pencarian (bukan cuma halaman yang tampil)
+  filtered.forEach(name => {
+    if (isChecked) memorySet.add(name);
+    else memorySet.delete(name);
   });
+  
+  // Render ulang agar checkbox di layar ikut ter-update
+  renderTemplateCheckboxList(type);
 }
 
 
@@ -196,23 +258,62 @@ async function loadUsersForReport() {
   } catch(e) { console.log("Gagal load user", e); }
 }
 
-function renderUserCheckboxList(filterText = "") {
-  const list = document.getElementById("userCheckboxList");
-  if(!list) return;
+// RENDER CHECKBOX USER
+function renderUserCheckboxList() {
+  const listContainer = document.getElementById("userCheckboxList");
+  if(!listContainer) return;
+
+  const state = paginationState.users;
+  
+  const existingPagination = listContainer.parentElement.querySelector(".pagination-container");
+  if(existingPagination) existingPagination.remove();
 
   const filtered = allUsersReport.filter(u => 
-    u.name.toLowerCase().includes(filterText) || u.number.includes(filterText)
+    u.name.toLowerCase().includes(state.filterText) || u.number.includes(state.filterText)
   );
 
-  list.innerHTML = filtered.map(u => {
-    const isChecked = checkedUserSet.has(u.number) ? "checked" : "";
-    return `
-      <label class="block p-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-sm border-b dark:border-gray-600">
-        <input type="checkbox" value="${u.number}" onchange="toggleSingleUser(this)" class="mr-2" ${isChecked}> 
-        ${u.name} <span class="text-xs text-gray-400">(${u.number})</span>
-      </label>
+  const totalItems = filtered.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+  if (state.currentPage > totalPages) state.currentPage = totalPages;
+  if (state.currentPage < 1) state.currentPage = 1;
+
+  const startIndex = (state.currentPage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+  const pageData = filtered.slice(startIndex, endIndex);
+
+  const isAllChecked = (filtered.length > 0 && filtered.every(u => checkedUserSet.has(u.number))) ? "checked" : "";
+  let html = `
+    <label class="block p-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer font-bold border-b-2 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-sm">
+      <input type="checkbox" id="selectAllUsers" onchange="toggleAllUsers(this)" class="mr-2" ${isAllChecked}> Pilih Semua User Terfilter
+    </label>
+  `;
+
+  if (filtered.length === 0) {
+    html += `<div class="p-3 text-center text-xs text-gray-400">Tidak ada user</div>`;
+  } else {
+    html += pageData.map(u => {
+      const isChecked = checkedUserSet.has(u.number) ? "checked" : "";
+      return `
+        <label class="block p-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-sm border-b dark:border-gray-600">
+          <input type="checkbox" value="${u.number}" onchange="toggleSingleUser(this)" class="mr-2" ${isChecked}> 
+          ${u.name} <span class="text-xs text-gray-400 truncate">(${u.number})</span>
+        </label>
+      `;
+    }).join('');
+  }
+
+  listContainer.innerHTML = html;
+
+  if (totalPages > 1) {
+    const paginationHtml = `
+      <div class="pagination-container flex items-center justify-between p-2 text-xs border-t dark:border-gray-600 bg-gray-50 dark:bg-gray-800">
+        <button onclick="changeReportPage('users', -1)" class="px-2 py-1 bg-white dark:bg-gray-700 border rounded shadow-sm disabled:opacity-30" ${state.currentPage === 1 ? 'disabled' : ''}>&lsaquo; Prev</button>
+        <span class="text-gray-500 font-medium">${startIndex + 1}-${endIndex} dari ${totalItems}</span>
+        <button onclick="changeReportPage('users', 1)" class="px-2 py-1 bg-white dark:bg-gray-700 border rounded shadow-sm disabled:opacity-30" ${state.currentPage === totalPages ? 'disabled' : ''}>Next &rsaquo;</button>
+      </div>
     `;
-  }).join('');
+    listContainer.insertAdjacentHTML("afterend", paginationHtml);
+  }
 }
 
 function toggleSingleUser(checkbox) {
@@ -223,12 +324,18 @@ function toggleSingleUser(checkbox) {
 
 function toggleAllUsers(masterCheckbox) {
   const isChecked = masterCheckbox.checked;
-  const checkboxes = document.querySelectorAll("#userCheckboxList input[type='checkbox']");
-  checkboxes.forEach(cb => {
-    cb.checked = isChecked;
-    if (isChecked) checkedUserSet.add(cb.value);
-    else checkedUserSet.delete(cb.value);
+  const state = paginationState.users;
+  const filtered = allUsersReport.filter(u => 
+    u.name.toLowerCase().includes(state.filterText) || u.number.includes(state.filterText)
+  );
+
+  filtered.forEach(u => {
+    if (isChecked) checkedUserSet.add(u.number);
+    else checkedUserSet.delete(u.number);
   });
+  
+  // Render ulang agar UI checkbox ter-update
+  renderUserCheckboxList();
 }
 
 // ================= 3. EKSEKUSI DOWNLOAD =================
