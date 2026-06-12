@@ -436,6 +436,14 @@ function editFlow(id) {
     document.getElementById("waScreen").innerHTML = `<div class="text-center my-2"><span class="bg-[#e1f3fb] dark:bg-[#182229] text-[#4a4a4a] dark:text-gray-300 text-[10px] px-2 py-1 rounded-lg border dark:border-gray-700 shadow-sm">Simulator Siap - Ketik sesuatu</span></div>`;
 
     renderCanvas();
+
+    // 🔥 FIX: Arahkan titik tengah canvas ke area awal node secara otomatis (Mulus)
+    setTimeout(() => {
+        const canvasEl = document.getElementById('flowCanvas');
+        if(canvasEl) {
+            canvasEl.scrollTo({ top: 0, left: 50, behavior: 'smooth' });
+        }
+    }, 100);
 }
 
 
@@ -531,10 +539,17 @@ function updateNodeKeyword(nodeId, newKeyword, parentArray = FLOW_DATA) {
 
 function renderCanvas() {
     const wrapper = document.getElementById("flowWrapper");
+    
+    // 🔥 FIX PENTING: Paksa area dalam Canvas menjadi sangat besar (3000px) agar bisa di-drag bebas
+    wrapper.style.minWidth = "3000px";
+    wrapper.style.minHeight = "3000px";
+    wrapper.style.padding = "50px";
+    
     if (FLOW_DATA.length === 0) {
-        wrapper.innerHTML = `<div class="text-center text-gray-400 dark:text-gray-500 mt-32 border-2 border-dashed border-gray-300 dark:border-gray-700 p-10 rounded-xl mx-auto w-1/2">Belum ada node alur.<br><span class="text-xs">Klik tombol <b>+ Sesi 24 Jam</b> atau <b>+ Kata Kunci</b> di pojok kanan atas.</span></div>`;
+        wrapper.innerHTML = `<div class="text-center text-gray-400 dark:text-gray-500 mt-32 border-2 border-dashed border-gray-300 dark:border-gray-700 p-10 rounded-xl w-96 mx-auto bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">Belum ada node alur.<br><span class="text-xs">Klik tombol <b>+ Sesi 24 Jam</b> atau <b>+ Kata Kunci</b> di pojok kanan atas.</span></div>`;
         return;
     }
+    
     let html = "";
     FLOW_DATA.forEach(node => html += renderNodeRecursive(node, true));
     wrapper.innerHTML = html;
