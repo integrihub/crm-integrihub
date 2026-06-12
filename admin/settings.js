@@ -10,9 +10,9 @@ const CLIENT_ID = localStorage.getItem("client_id");
 // 🔥 INISIALISASI SETTINGS
 document.addEventListener("DOMContentLoaded", () => {
     console.log("Inisialisasi Halaman Settings Dimulai...");
-    // Biarkan app.js mengurus logo lewat init(), di sini kita cuma ngurus Canvas
     loadFlowsFromDB();
     loadRealTemplates();
+    enableCanvasDrag(); // 🔥 Aktifkan fitur geser layar
 });
 
 // ==========================================
@@ -554,8 +554,9 @@ function renderNodeRecursive(node, isRoot = false) {
     else if (node.type === 'button_trigger') boxHeader = `<div class="bg-blue-500 dark:bg-blue-600 text-white text-[10px] font-bold px-3 py-1.5 rounded-t-lg shadow-sm border-b border-blue-600 flex items-center gap-1">🔘 Jika Klik: ${node.keyword}</div>`;
 
     // UI Custom Searchable Dropdown
-    let html = `<div class="flow-node ${isRoot ? 'mb-6' : ''}">
-        <div class="w-64 bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700 rounded-lg z-10 relative group transition-transform hover:-translate-y-0.5">
+    // 🔥 FIX: Tambahkan 'focus-within:z-[999]' dan 'hover:z-[999]' agar selalu di atas
+    let html = `<div class="flow-node relative focus-within:z-[999] hover:z-[999] ${isRoot ? 'mb-6' : ''}">
+        <div class="w-64 bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700 rounded-lg z-10 relative group transition-transform hover:-translate-y-0.5 focus-within:z-[999] hover:z-[999]">
             ${boxHeader}
             <div class="p-4 relative">
                 
@@ -678,3 +679,47 @@ document.addEventListener('click', function(event) {
         document.querySelectorAll('[id^="dropdown_"]').forEach(el => el.classList.add('hidden'));
     }
 });
+
+// ============================================================
+// 🔥 FITUR DRAG TO PAN (GESER LAYAR CANVAS)
+// ============================================================
+function enableCanvasDrag() {
+    const slider = document.getElementById('flowCanvas');
+    if (!slider) return;
+
+    let isDown = false;
+    let startX, startY, scrollLeft, scrollTop;
+
+    slider.addEventListener('mousedown', (e) => {
+        // Cegah layar tergeser jika Admin sedang nge-klik text input, tombol, atau dropdown
+        if(e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || e.target.closest('.flow-node .w-64')) return;
+        
+        isDown = true;
+        slider.classList.add('cursor-grabbing');
+        startX = e.pageX - slider.offsetLeft;
+        startY = e.pageY - slider.offsetTop;
+        scrollLeft = slider.scrollLeft;
+        scrollTop = slider.scrollTop;
+    });
+
+    slider.addEventListener('mouseleave', () => {
+        isDown = false;
+        slider.classList.remove('cursor-grabbing');
+    });
+
+    slider.addEventListener('mouseup', () => {
+        isDown = false;
+        slider.classList.remove('cursor-grabbing');
+    });
+
+    slider.addEventListener('mousemove', (e) => {
+        if (!isDown) return;
+        e.preventDefault();
+        const x = e.pageX - slider.offsetLeft;
+        const y = e.pageY - slider.offsetTop;
+        const walkX = (x - startX) * 1.5; // Kecepatan geser horizontal
+        const walkY = (y - startY) * 1.5; // Kecepatan geser vertikal
+        slider.scrollLeft = scrollLeft - walkX;
+        slider.scrollTop = scrollTop - walkY;
+    });
+}
