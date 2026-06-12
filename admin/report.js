@@ -227,35 +227,26 @@ function toggleAllTemplates(type) {
 // ================= 2. LOAD & RENDER MULTI-USER =================
 async function loadUsersForReport() {
   try {
-    const res = await fetch(REPORT_API + "/messages", { headers: { "client-id": REPORT_CID } });
+    // 🔥 FIX: Tarik dari endpoint /conversations dengan limit besar agar semua kontak masuk.
+    // Ini jauh lebih ringan dari /messages karena backend sudah mem-filter 1 user = 1 baris.
+    const res = await fetch(REPORT_API + "/conversations?limit=5000", { 
+        headers: { "client-id": REPORT_CID } 
+    });
     const data = await res.json();
     
     if(Array.isArray(data)) {
-       const map = {};
+       // Karena dari /conversations datanya sudah unik per nomor, 
+       // kita tidak perlu lagi melakukan proses mapping/grouping yang ribet.
+       allUsersReport = data.map(c => ({
+           number: c.number,
+           name: c.name
+       }));
        
-       // 🔥 FIX: Urutkan dari ID kecil ke besar, agar nama terbaru akan menimpa nama lama
-       const sorted = [...data].sort((a, b) => a.id - b.id);
-       
-       sorted.forEach(m => {
-         const user = m.direction === 'outgoing' ? m.receiver : m.sender;
-         
-         if (user) {
-            // Jika belum ada di map, buat baru
-            if (!map[user]) {
-                map[user] = { number: user, name: m.name || "User " + user.slice(-4) };
-            } else {
-                // Jika sudah ada, update JIKA namanya benar (bukan placeholder)
-                if (m.name && m.name !== "Unknown" && !m.name.startsWith("User ")) {
-                    map[user].name = m.name;
-                }
-            }
-         }
-       });
-       
-       allUsersReport = Object.values(map);
        renderUserCheckboxList();
     }
-  } catch(e) { console.log("Gagal load user", e); }
+  } catch(e) { 
+      console.log("Gagal load user", e); 
+  }
 }
 
 // RENDER CHECKBOX USER
