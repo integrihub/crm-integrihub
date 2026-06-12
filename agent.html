@@ -758,56 +758,69 @@ function showMessage(){
   document.getElementById("chatWrapper").classList.remove("hidden");
 }
 
-// ================= STATISTIK FIX (SINKRON DENGAN DATABASE) =================
-function renderDashboardStats(){
+// ================= STATISTIK FIX (SINKRON LANGSUNG API SERVER) =================
+async function renderDashboardStats() {
   if(!CLIENT) return; 
 
-  let incoming = 0;
-  let outgoing = 0;
-  let resolvedCount = 0;
-  let activeUsers = 0;
+  try {
+    // Tarik data mutlak dari server (tidak peduli pagination frontend)
+    const res = await fetch(API + `/kpi-agent?start=&end=`, { headers: { "client-id": CID }});
+    const kpiData = await res.json();
+    
+    let incoming = 0;
+    let outgoing = 0;
+    let resolvedCount = 0;
+    let activeUsers = 0;
 
-  Object.values(processedChatMap).forEach(c => {
-     // Lewati chat yang dipegang agent lain
-     if (c.assigned_to && c.assigned_to !== EMAIL) return;
+    // Filter array hasil API khusus untuk agen yang sedang login
+    const myKpi = Array.isArray(kpiData) ? kpiData.find(k => k.agent === EMAIL) : null;
 
-     if(c.is_closed) resolvedCount++;
-     else activeUsers++;
-     
-     if (c.is_last_out) outgoing++;
-     else incoming++;
-  });
+    if (myKpi) {
+        incoming = parseInt(myKpi.incoming) || 0;
+        outgoing = parseInt(myKpi.outgoing) || 0;
+        resolvedCount = parseInt(myKpi.resolved) || 0;
+        const totalUsers = parseInt(myKpi.users) || 0;
+        
+        // Active Chat (User) = Total User Unik - User yang sudah Resolved
+        activeUsers = totalUsers - resolvedCount;
+        if (activeUsers < 0) activeUsers = 0;
+    }
 
-  const total = incoming + outgoing;
+    const total = incoming + outgoing;
 
-  const totalEl = document.getElementById("totalChat");
-  if(totalEl) totalEl.innerText = total;
-  const incomingEl = document.getElementById("incomingChat");
-  if(incomingEl) incomingEl.innerText = incoming;
-  const outgoingEl = document.getElementById("outgoingChat");
-  if(outgoingEl) outgoingEl.innerText = outgoing;
-  const resolvedEl = document.getElementById("resolvedChat");
-  if(resolvedEl) resolvedEl.innerText = resolvedCount;
+    // Update DOM UI
+    const totalEl = document.getElementById("totalChat");
+    if(totalEl) totalEl.innerText = total;
+    const incomingEl = document.getElementById("incomingChat");
+    if(incomingEl) incomingEl.innerText = incoming;
+    const outgoingEl = document.getElementById("outgoingChat");
+    if(outgoingEl) outgoingEl.innerText = outgoing;
+    const resolvedEl = document.getElementById("resolvedChat");
+    if(resolvedEl) resolvedEl.innerText = resolvedCount;
 
-  const dashboardView = document.getElementById("dashboardView");
-  if(dashboardView && !dashboardView.classList.contains("hidden")) {
-      const ctx = document.getElementById("chart");
-      if(ctx) {
-          const existingChart = Chart.getChart(ctx);
-          if (existingChart) existingChart.destroy();
-          new Chart(ctx, {
-            type: 'bar',
-            data: {
-              labels: ['Incoming', 'Outgoing', 'Active Chat', 'Resolved'],
-              datasets: [{
-                label: 'Statistik Agent',
-                data: [incoming, outgoing, activeUsers, resolvedCount],
-                backgroundColor: ['rgba(16, 185, 129, 0.8)', 'rgba(245, 158, 11, 0.8)', 'rgba(59, 130, 246, 0.8)', 'rgba(107, 114, 128, 0.8)']
-              }]
-            },
-            options: { responsive: true, maintainAspectRatio: false }
-          });
-      }
+    // Update Chart
+    const dashboardView = document.getElementById("dashboardView");
+    if(dashboardView && !dashboardView.classList.contains("hidden")) {
+        const ctx = document.getElementById("chart");
+        if(ctx) {
+            const existingChart = Chart.getChart(ctx);
+            if (existingChart) existingChart.destroy();
+            new Chart(ctx, {
+              type: 'bar',
+              data: {
+                labels: ['Incoming', 'Outgoing', 'Active Chat', 'Resolved'],
+                datasets: [{
+                  label: 'Statistik Akurat Agent',
+                  data: [incoming, outgoing, activeUsers, resolvedCount],
+                  backgroundColor: ['rgba(16, 185, 129, 0.8)', 'rgba(245, 158, 11, 0.8)', 'rgba(59, 130, 246, 0.8)', 'rgba(107, 114, 128, 0.8)']
+                }]
+              },
+              options: { responsive: true, maintainAspectRatio: false }
+            });
+        }
+    }
+  } catch (error) {
+     console.error("Gagal load KPI Agent:", error);
   }
 }
   
