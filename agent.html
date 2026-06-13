@@ -190,6 +190,10 @@
             Percakapan telah ditutup.<br>Klik <b>"🔄 Reopen Chat"</b> di atas untuk membuka percakapan.
           </div>
 
+          <div id="sessionExpiredBanner" class="hidden flex-none p-3 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 text-[13px] text-center border-t border-yellow-100 dark:border-yellow-800 transition font-medium">
+            ⚠️ Sesi WA 24 Jam telah berakhir.<br>Harap hubungi <b>Admin</b> untuk membalas pesan pelanggan menggunakan Template.
+          </div>
+
           <div id="chatInputArea" class="p-2 border-t flex items-center gap-2 flex-none bg-white dark:bg-gray-800 relative">
             <button onclick="toggleEmoji()" class="text-xl hover:scale-110 transition">😊</button>
 
@@ -953,6 +957,52 @@ function renderChatListUI() {
   if(list.length === 0) chatListEl.innerHTML = `<div class="p-6 text-center text-xs text-gray-400 italic">Tidak ada percakapan.</div>`;
 }
 
+// ================= LOGIKA CEK 24 JAM & UPDATE UI =================
+function check24HourSession() {
+    if (typeof CURRENT_ROOM_MESSAGES === 'undefined' || CURRENT_ROOM_MESSAGES.length === 0) return true; // Terkunci jika tidak ada riwayat sama sekali
+
+    // Cari pesan terakhir yg masuk DARI pelanggan (incoming)
+    const lastUserMsg = [...CURRENT_ROOM_MESSAGES].reverse().find(m => m.direction !== "outgoing" && m.direction !== "system");
+    
+    if (!lastUserMsg) return true; // Terkunci jika belum ada pesan masuk dari user
+
+    const lastMsgTime = new Date(lastUserMsg.timestamp.replace(" ", "T")).getTime();
+    const now = new Date().getTime();
+    
+    const diffHours = (now - lastMsgTime) / (1000 * 60 * 60);
+    return diffHours > 24; // Return TRUE jika sudah lebih dari 24 jam (Expired)
+}
+
+function updateChatUIState() {
+    const isResolved = processedChatMap[selected]?.is_closed;
+    const isExpired = check24HourSession();
+    
+    const btnResolve = document.getElementById("btnResolve");
+    const chatInputArea = document.getElementById("chatInputArea");
+    const resolvedBanner = document.getElementById("resolvedBanner");
+    const sessionExpiredBanner = document.getElementById("sessionExpiredBanner");
+
+    // Reset Semua State Awal
+    if (resolvedBanner) resolvedBanner.classList.add("hidden");
+    if (sessionExpiredBanner) sessionExpiredBanner.classList.add("hidden");
+    if (chatInputArea) { chatInputArea.classList.remove("hidden"); chatInputArea.classList.add("flex"); }
+
+    if (isResolved) {
+        // Jika status Resolved
+        if(btnResolve) { btnResolve.innerHTML = "🔄 Reopen Chat"; btnResolve.classList.replace("text-green-600", "text-gray-500"); btnResolve.classList.replace("border-green-200", "border-gray-200"); }
+        if (resolvedBanner) resolvedBanner.classList.remove("hidden");
+        if (chatInputArea) { chatInputArea.classList.add("hidden"); chatInputArea.classList.remove("flex"); }
+    } else if (isExpired) {
+        // Jika status Expired 24 Jam (Tapi belum resolved)
+        if(btnResolve) { btnResolve.innerHTML = "✅ Resolve"; btnResolve.classList.replace("text-gray-500", "text-green-600"); btnResolve.classList.replace("border-gray-200", "border-green-200"); }
+        if (sessionExpiredBanner) sessionExpiredBanner.classList.remove("hidden"); // Muncul banner kuning
+        if (chatInputArea) { chatInputArea.classList.add("hidden"); chatInputArea.classList.remove("flex"); } // Tutup text box
+    } else {
+        // Normal (Bisa ngetik)
+        if(btnResolve) { btnResolve.innerHTML = "✅ Resolve"; btnResolve.classList.replace("text-gray-500", "text-green-600"); btnResolve.classList.replace("border-gray-200", "border-green-200"); }
+    }
+}
+
 // 3. FUNGSI LOAD POLLING (Tarik pesan chat aktif saja)
 async function load(){
   if(!CLIENT || !selected) return;
@@ -979,20 +1029,7 @@ async function load(){
         setTimeout(() => { if (!isUserScrollingUp) chatBoxEl.scrollTo({ top: chatBoxEl.scrollHeight, behavior: "smooth" }); }, 100);
     } else if (isStatusChanged) { renderBubbleBox(); }
 
-    const isResolved = processedChatMap[selected]?.is_closed;
-    const btnResolve = document.getElementById("btnResolve");
-    const chatInputArea = document.getElementById("chatInputArea");
-    const resolvedBanner = document.getElementById("resolvedBanner");
-
-    if (isResolved) {
-      if(btnResolve) { btnResolve.innerHTML = "🔄 Reopen Chat"; btnResolve.classList.replace("text-green-600", "text-gray-500"); btnResolve.classList.replace("border-green-200", "border-gray-200"); }
-      if (resolvedBanner) resolvedBanner.classList.remove("hidden");
-      if (chatInputArea) { chatInputArea.classList.add("hidden"); chatInputArea.classList.remove("flex"); }
-    } else {
-      if(btnResolve) { btnResolve.innerHTML = "✅ Resolve"; btnResolve.classList.replace("text-gray-500", "text-green-600"); btnResolve.classList.replace("border-gray-200", "border-green-200"); }
-      if (resolvedBanner) resolvedBanner.classList.add("hidden");
-      if (chatInputArea) { chatInputArea.classList.remove("hidden"); chatInputArea.classList.add("flex"); }
-    }
+    updateChatUIState(); // 🔥 Panggil logika baru di sini
   } catch(e) { console.error("Gagal auto-refresh chat:", e); }
 }
 
@@ -1049,6 +1086,7 @@ async function fetchChatHistory(num, lastId = null) {
         const sendBtnEl = document.getElementById("sendBtn");
         if (msgEl) msgEl.disabled = false;
         if (sendBtnEl) { sendBtnEl.disabled = false; sendBtnEl.innerText = "Send"; }
+        updateChatUIState();
     } catch (e) { console.error("Gagal load history:", e); } 
     finally { isFetchingHistory = false; }
 }
