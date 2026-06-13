@@ -36,6 +36,7 @@ document.addEventListener("DOMContentLoaded", () => {
             </div>
             
             <div class="overflow-y-auto flex-1 pr-2 mb-4 no-scrollbar">
+            <input type="text" id="searchInRoomTemplate" onkeyup="filterInRoomTemplates()" placeholder="🔍 Cari nama template..." class="w-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white p-2 mb-2 rounded-lg text-sm font-medium outline-none focus:border-green-500 transition">
                 <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">1. Pilih Template Meta (Approved)</label>
                 <select id="inRoomTemplateSelect" onchange="renderInRoomTemplateParams()" class="w-full border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white p-2.5 rounded-xl outline-none focus:border-green-500 mb-4 font-medium transition">
                     <option value="">-- Loading Template --</option>
@@ -78,6 +79,10 @@ window.check24HourSession = function() {
 window.openInRoomTemplateModal = function() {
     const modal = document.getElementById("inRoomTemplateModal");
     const select = document.getElementById("inRoomTemplateSelect");
+
+    // 🔥 TAMBAHKAN INI UNTUK RESET SEARCH
+    const searchInput = document.getElementById("searchInRoomTemplate");
+    if(searchInput) searchInput.value = "";
     
     // Sinkronisasi dengan allTemplates dari app.js (Sama persis seperti quickblast)
     if(typeof allTemplates !== 'undefined') {
@@ -96,6 +101,18 @@ window.openInRoomTemplateModal = function() {
         modal.classList.remove("opacity-0");
         modal.querySelector('div').classList.remove("scale-95");
     }, 10);
+};
+
+window.filterInRoomTemplates = function() {
+    const query = document.getElementById("searchInRoomTemplate").value.toLowerCase();
+    const select = document.getElementById("inRoomTemplateSelect");
+    const options = select.options;
+    
+    // Looping dari i=1 agar option pertama (default "-- Pilih --") tidak ikut tersembunyi
+    for(let i = 1; i < options.length; i++) {
+        const text = options[i].text.toLowerCase();
+        options[i].style.display = text.includes(query) ? "" : "none";
+    }
 };
 
 window.closeInRoomTemplateModal = function() {
