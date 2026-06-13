@@ -7,6 +7,8 @@
   <title>Login</title>
   <link rel="icon" href="https://cdn.phototourl.com/free/2026-05-02-cd291600-7ecf-4524-9d37-7de268482d4e.png">
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Script Cloudflare Turnstile -->
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 </head>
 
 <body 
@@ -14,20 +16,35 @@
   style="background-image: url('https://cdn.phototourl.com/free/2026-06-10-47898f95-a81a-4993-b770-a17a2713706a.png');"
 >
 
+<div id="globalLoader" class="fixed inset-0 z-[9999] bg-white dark:bg-gray-900 flex flex-col justify-center items-center transition-opacity duration-500">
+    <img src="https://cdn.phototourl.com/free/2026-05-02-ab097072-d91f-49c4-a043-141626c5b8a8.png" 
+         alt="IntegriHub Logo" 
+         class="h-16 mb-6 animate-pulse drop-shadow-md">
+    <div class="w-10 h-10 border-4 border-gray-200 border-t-green-500 rounded-full animate-spin dark:border-gray-700 dark:border-t-green-400"></div>
+</div>
 
-
-<!-- LOGO KIRI ATAS -->
+<script>
+    // Script ini akan otomatis menyembunyikan layar putih saat halaman sudah siap dimuat
+    window.addEventListener('load', function() {
+        const loader = document.getElementById('globalLoader');
+        if (loader) {
+            setTimeout(() => {
+                loader.style.opacity = '0'; 
+                setTimeout(() => {
+                    loader.style.display = 'none'; 
+                }, 500); 
+            }, 300);
+        }
+    });
+</script>
 <img src="https://cdn.phototourl.com/free/2026-05-02-ab097072-d91f-49c4-a043-141626c5b8a8.png" 
      class="absolute top-10 left-12 h-20 z-10">
 
-<!-- GLOW EFFECT -->
 <div class="absolute w-[400px] h-[400px] bg-blue-500/20 blur-3xl rounded-full top-0 left-0"></div>
 <div class="absolute w-[400px] h-[400px] bg-green-500/20 blur-3xl rounded-full bottom-0 right-0"></div>
 
-<!-- CARD LOGIN -->
 <div class="bg-white/90 backdrop-blur p-8 rounded-2xl shadow-xl w-[350px] z-10 relative">
 
-  <!-- TEXT -->
   <h1 class="text-xl font-semibold text-center text-gray-700 mb-1">
     Selamat datang di layanan
   </h1>
@@ -36,14 +53,15 @@
     CRM IntegriHub
   </h2>
 
-  <!-- INPUT -->
   <input id="email" placeholder="Email"
     class="w-full p-2 border rounded mb-3 focus:outline-none focus:ring-2 focus:ring-green-400">
 
   <input id="password" type="password" placeholder="Password"
     class="w-full p-2 border rounded mb-4 focus:outline-none focus:ring-2 focus:ring-green-400">
 
-  <!-- BUTTON -->
+    <!-- CLOUDFLARE TURNSTILE WIDGET -->
+  <div class="cf-turnstile mb-4 flex justify-center" data-sitekey="0x4AAAAAADj_qt2FZUqnN_yS" data-theme="light"></div>
+
   <button onclick="login()"
     class="bg-green-500 hover:bg-green-600 transition text-white w-full py-2 rounded-lg">
     Login
@@ -53,9 +71,9 @@
 
 <script>
 const API = window.location.hostname.includes("staging") || 
-            window.location.hostname.includes("pages.dev") || 
-            window.location.hostname.includes("localhost") || 
-            window.location.hostname.includes("127.0.0.1")
+               window.location.hostname.includes("pages.dev") || 
+               window.location.hostname.includes("localhost") || 
+               window.location.hostname.includes("127.0.0.1")
   ? "https://api-staging.crm.integrihub.my.id"
   : "https://api-crm.integrihub.my.id";
 
@@ -71,6 +89,12 @@ async function login(){
 
   if (!emailInput || !passwordInput) return alert("⚠️ Isi email dan password!");
 
+  // 🔥 TANGKAP TOKEN CLOUDFLARE
+  const turnstileToken = turnstile.getResponse();
+  if (!turnstileToken) {
+      return alert("⚠️ Mohon tunggu/selesaikan validasi keamanan Cloudflare!");
+  }
+
   // 🔥 ANTI SPAM KLIK
   btn.innerText = "⏳ Memproses...";
   btn.disabled = true;
@@ -79,13 +103,18 @@ async function login(){
     const res = await fetch(API + "/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: emailInput, password: passwordInput })
+      body: JSON.stringify({ 
+          email: emailInput, 
+          password: passwordInput,
+          cf_token: turnstileToken // 🔥 Kirim token keamanan ke backend
+      })
     });
 
     if (!res.ok) {
       alert("❌ Email atau password salah");
       btn.innerText = "Login";
       btn.disabled = false;
+      turnstile.reset();
       return;
     }
 
@@ -109,6 +138,7 @@ async function login(){
     alert("❌ Server error / CORS");
     btn.innerText = "Login";
     btn.disabled = false;
+    turnstile.reset();
   }
 }
 </script>
