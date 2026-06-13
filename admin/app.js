@@ -742,6 +742,10 @@ function updateChatHeaderUI(num) {
   const isResolved = processedChatMap[num]?.is_closed;
   const btnResolve = document.getElementById("btnResolve");
   const chatInputArea = document.getElementById("chatInputArea");
+  const sessionExpiredArea = document.getElementById("sessionExpiredArea");
+
+  // Cek apakah 24 jam masih aktif
+  const isSessionActive = typeof check24HourSession === "function" ? check24HourSession() : true;
 
   if(isResolved){
       if(btnResolve) {
@@ -750,13 +754,23 @@ function updateChatHeaderUI(num) {
       }
       chatInputArea?.classList.add("hidden");
       chatInputArea?.classList.remove("flex");
+      sessionExpiredArea?.classList.add("hidden");
   } else {
       if(btnResolve) {
           btnResolve.innerHTML = "✅ Resolve";
           btnResolve.classList.replace("text-gray-500", "text-green-600");
       }
-      chatInputArea?.classList.remove("hidden");
-      chatInputArea?.classList.add("flex");
+      
+      // LOGIKA SESSION EXPIRED 24 JAM
+      if (isSessionActive) {
+          chatInputArea?.classList.remove("hidden");
+          chatInputArea?.classList.add("flex");
+          sessionExpiredArea?.classList.add("hidden");
+      } else {
+          chatInputArea?.classList.add("hidden");
+          chatInputArea?.classList.remove("flex");
+          sessionExpiredArea?.classList.remove("hidden");
+      }
   }
 }
 
@@ -1035,7 +1049,6 @@ async function fetchChatHistory(num, lastId = null) {
     if (isFetchingHistory || !hasMoreHistory) return;
     isFetchingHistory = true;
 
-    // Tarik 50 pesan. Jika lastId ada, tarik pesan sebelum lastId tersebut.
     let url = `${API}/messages?target=${num}&limit=50`;
     if (lastId) url += `&last_id=${lastId}`;
 
@@ -1043,26 +1056,27 @@ async function fetchChatHistory(num, lastId = null) {
         const res = await fetch(url, { headers: { "client-id": CID } });
         const data = await res.json();
 
-        // Jika data kurang dari 50, berarti chat sudah mentok di awal percakapan
         if (!Array.isArray(data) || data.length < 50) {
             hasMoreHistory = false; 
         }
 
-        const sortedData = data.sort((a, b) => a.id - b.id); // Urut dari lama ke baru
+        const sortedData = data.sort((a, b) => a.id - b.id);
 
         const chatBoxEl = document.getElementById("chatBox");
         let prevHeight = 0;
         if (chatBoxEl) prevHeight = chatBoxEl.scrollHeight;
 
         if (lastId) {
-            CURRENT_ROOM_MESSAGES = [...sortedData, ...CURRENT_ROOM_MESSAGES]; // Sisipkan ke atas
+            CURRENT_ROOM_MESSAGES = [...sortedData, ...CURRENT_ROOM_MESSAGES];
         } else {
-            CURRENT_ROOM_MESSAGES = sortedData; // Load data pertama kali klik
+            CURRENT_ROOM_MESSAGES = sortedData; 
         }
 
         renderBubbleBox();
 
-        // Tahan posisi scroll saat narik data lama agar tidak loncat ke bawah (Kayak WA Web)
+        // 🔥 PENTING: Panggil update UI disini supaya hitung ulang waktu 24 jam!
+        updateChatHeaderUI(num);
+
         if (lastId && chatBoxEl) {
             chatBoxEl.scrollTop = chatBoxEl.scrollHeight - prevHeight;
         } else if (chatBoxEl) {
