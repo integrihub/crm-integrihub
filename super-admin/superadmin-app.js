@@ -473,22 +473,24 @@ async function editClient(id){
   const admin = data.users.find(u=>u.role==="admin");
   const agent = data.users.find(u=>u.role==="agent");
 
-  edit_name.value = data.client.name;
-  edit_sender.value = data.client.sender;
-  edit_token.value = data.client.bearer_token;
-  edit_logo.value = data.client.logo_url;
-  edit_color.value = data.client.primary_color;
+  edit_name.value = data.client.name || "";
+  edit_sender.value = data.client.sender || "";
+  edit_token.value = data.client.bearer_token || "";
+  edit_logo.value = data.client.logo_url || "";
+  edit_color.value = data.client.primary_color || "";
 
   document.getElementById("editModal").classList.remove("hidden");
-  // 🔥 Set value billing
+  
+  // 🔥 Set value billing (Perbaikan: Mengizinkan angka 0)
   if(document.getElementById("edit_billing_type")) {
     document.getElementById("edit_billing_type").value = data.client.billing_type || "prepaid";
-    document.getElementById("edit_price_marketing").value = data.client.price_marketing || 880;
-    document.getElementById("edit_price_utility").value = data.client.price_utility || 600;
-    document.getElementById("edit_price_auth").value = data.client.price_authentication || 600;
-    document.getElementById("edit_price_service").value = data.client.price_service || 350;
+    
+    // Gunakan ternary operator untuk memastikan angka 0 tetap ditulis sebagai 0
+    document.getElementById("edit_price_marketing").value = data.client.price_marketing !== null ? data.client.price_marketing : 880;
+    document.getElementById("edit_price_utility").value = data.client.price_utility !== null ? data.client.price_utility : 600;
+    document.getElementById("edit_price_auth").value = data.client.price_authentication !== null ? data.client.price_authentication : 600;
+    document.getElementById("edit_price_service").value = data.client.price_service !== null ? data.client.price_service : 350;
   }
-  
 }
 
 //SAVE EDIT CLIENT  
