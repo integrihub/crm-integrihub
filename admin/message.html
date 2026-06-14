@@ -32,24 +32,28 @@
 </head>
 
 <body class="bg-gray-100 dark:bg-gray-900 text-black dark:text-white h-screen overflow-hidden flex flex-col" onload="init('message')">
-<div id="globalLoader" class="fixed inset-0 z-[9999] bg-white dark:bg-gray-900 flex flex-col justify-center items-center transition-opacity duration-500">
-      <img src="https://cdn.phototourl.com/free/2026-04-17-34afdbc3-383e-4a83-bee6-d9afb83d3bb6.png" 
-           alt="IntegriHub Logo" 
-           class="h-16 mb-6 animate-pulse drop-shadow-md">
-      <div class="w-10 h-10 border-4 border-gray-200 border-t-blue-500 rounded-full animate-spin dark:border-gray-700 dark:border-t-blue-400"></div>
-  </div>
+<div id="globalLoader" class="fixed inset-0 z-[9999] bg-white dark:bg-gray-900 flex flex-col justify-center items-center transition-opacity duration-300">
+    <img src="https://cdn.phototourl.com/free/2026-04-17-34afdbc3-383e-4a83-bee6-d9afb83d3bb6.png" 
+         alt="IntegriHub Logo" 
+         class="h-16 mb-6 animate-pulse drop-shadow-md">
+    <div class="w-10 h-10 border-4 border-gray-200 border-t-blue-500 rounded-full animate-spin dark:border-gray-700 dark:border-t-blue-400"></div>
+</div>
 
-  <script>
-      window.addEventListener('load', function() {
-          const loader = document.getElementById('globalLoader');
-          if (loader) {
-              setTimeout(() => {
-                  loader.style.opacity = '0'; 
-                  setTimeout(() => { loader.style.display = 'none'; }, 500); 
-              }, 300);
-          }
-      });
-  </script>
+<script>
+    // Menggunakan 'load' agar tetap aman menunggu CSS/Chart JS selesai
+    window.addEventListener('load', function() {
+        const loader = document.getElementById('globalLoader');
+        if (loader) {
+            // Langsung eksekusi fade out tanpa jeda tambahan (hapus setTimeout 300)
+            loader.style.opacity = '0'; 
+            
+            // Tunggu 300ms (sesuai duration-300) lalu hilangkan elemennya
+            setTimeout(() => { 
+                loader.style.display = 'none'; 
+            }, 300); 
+        }
+    });
+</script>
 <!-- TOP BAR -->
 <div class="flex-none flex justify-between items-center p-3 bg-white dark:bg-gray-800 shadow z-20">
 
